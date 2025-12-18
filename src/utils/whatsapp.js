@@ -141,3 +141,25 @@ export async function sendUrlButton(to, bodyText, buttonText, url, headerText = 
 
   return makeWhatsAppRequest(buildInteractiveBody(to, interactive), 'sendUrlButton');
 }
+
+// Send native WhatsApp location (requires latitude and longitude)
+export async function sendLocation(to, latitude, longitude, name = null, address = null) {
+  if (!checkCredentials()) {
+    console.log(`Skipping sendLocation to ${to} because credentials are missing.`);
+    return;
+  }
+
+  const body = {
+    messaging_product: 'whatsapp',
+    to,
+    type: 'location',
+    location: {
+      latitude: Number(latitude),
+      longitude: Number(longitude),
+      name: name || undefined,
+      address: address || undefined
+    }
+  };
+
+  return makeWhatsAppRequest(body, 'sendLocation');
+}

@@ -1,4 +1,4 @@
-import { sendMessage, sendButtonMessage, sendListMessage, sendUrlButton } from '../utils/whatsapp.js';
+import { sendMessage, sendButtonMessage, sendListMessage, sendUrlButton, sendLocation } from '../utils/whatsapp.js';
 import conversation from '../models/conversationStateService.js';
 import * as catalog from '../services/catalogService.js';
 import Order from '../models/Order.js';
@@ -9,16 +9,24 @@ import cartService from '../services/cartService.js';
 const MAIN_MENU = {
   buttons: [
     { id: 'orders', title: '🛒 Order Now' },
+    { id: 'track_order', title: '📦 Track Order' },
     { id: 'support', title: '💬 Support & Queries' }
   ],
   footer: 'Type "menu" anytime to return here'
 };
 
+// Store location/address
+const STORE_ADDRESS = process.env.STORE_ADDRESS || 'Purana Thana, Shop No. SL-2, Opp Pillar No 56, Sodala, Ajmer Rd, Sodhala, Jaipur, Rajasthan 302019';
+const STORE_LAT = process.env.STORE_LATITUDE ? parseFloat(process.env.STORE_LATITUDE) : null;
+const STORE_LNG = process.env.STORE_LONGITUDE ? parseFloat(process.env.STORE_LONGITUDE) : null;
+const STORE_MAPS_QUERY = process.env.STORE_MAPS_QUERY ? process.env.STORE_MAPS_QUERY.trim() : null;
+const STORE_MAPS_LINK = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(STORE_ADDRESS)}`;
+
 // Helper to send main menu
 async function showMainMenu(from, userName = null) {
   const text = userName 
-    ? `Hello ${userName}! 👋\n\nWelcome to *Bhuramal Bhagirath Prasad* - Your trusted partner for premium dry fruits and nuts! 🌟\n\nWhat can I help you with today?`
-    : 'What can I help you with today?';
+    ? `Hello ${userName}! 👋\n\nWelcome to *Bhuramal Bhagirath Prasad* - Your trusted partner for premium dry fruits and nuts! 🌟\n\nWhat can I help you with today?\n\nNeed help? Tap *Support & Queries*.`
+    : 'What can I help you with today?\n\nNeed help? Tap *Support & Queries*.';
   
   await sendButtonMessage(from, text, MAIN_MENU.buttons, "Main Menu", MAIN_MENU.footer);
 }
@@ -85,6 +93,21 @@ async function handleIncoming(req, res) {
         const messages = (value.messages && Array.isArray(value.messages)) ? value.messages : [];
 
         for (const message of messages) {
+          const messageId = message.id;
+
+          // Skip if already processed this message ID
+          if (global.processedMessages?.has(messageId)) {
+            console.log(`⏭️  Skipping duplicate message ID: ${messageId}`);
+            continue;
+          }
+          if (!global.processedMessages) global.processedMessages = new Set();
+          global.processedMessages.add(messageId);
+
+          // Keep cache small (last 1000 messages)
+          if (global.processedMessages.size > 1000) {
+            const arr = Array.from(global.processedMessages);
+            global.processedMessages = new Set(arr.slice(-1000));
+          }
           const from = message.from; // sender phone number id
           const userName = value.contacts?.[0]?.profile?.name || 'there'; // Get user's WhatsApp name
 
@@ -121,6 +144,13 @@ async function handleIncoming(req, res) {
             continue;
           }
 
+          // Global: switch to manual support from anywhere
+          if (text === 'support') {
+            await conversation.setState(from, 'manual');
+            await sendMessage(from, '👨‍💼 You\'re now in *manual support* mode. Our team will assist you shortly.\n\nType "menu" anytime to return to the bot.');
+            continue;
+          }
+
           if (textLower === 'back' || text === 'back_to_category') {
             await conversation.setState(from, 'menu');
             await showMainMenu(from);
@@ -134,9 +164,37 @@ async function handleIncoming(req, res) {
             continue;
           }
 
-          // Handle expired/no state - don't auto-show menu
+          // Global: address/location queries from any state (single interactive message)
+          if (/\b(address|location|where\s+are\s+you|store\s+location|shop\s+address|map)\b/i.test(textLower)) {
+            const mapsLink = STORE_MAPS_QUERY
+              ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(STORE_MAPS_QUERY)}`
+              : (Number.isFinite(STORE_LAT) && Number.isFinite(STORE_LNG))
+                ? `https://www.google.com/maps/search/?api=1&query=${STORE_LAT},${STORE_LNG}`
+                : STORE_MAPS_LINK;
+
+            await sendUrlButton(
+              from,
+              `📍 *Store Address*\n${STORE_ADDRESS}\n\nTap the button below to open the location in Google Maps.`,
+              'View Location',
+              mapsLink,
+              '📍 Location'
+            );
+            continue;
+          }
+
+          // Handle expired/no state - auto-show menu on any first message
           if (!state) {
-            await sendMessage(from, "Hi! Type 'menu' to see options or 'hi' to start over.");
+            await conversation.setState(from, 'menu');
+            await showMainMenu(from, userName);
+            continue;
+          }
+
+          // Manual mode: do not auto-respond until user types menu
+          if (state === 'manual') {
+            if (textLower === 'menu') {
+              await conversation.setState(from, 'menu');
+              await showMainMenu(from);
+            }
             continue;
           }
 
@@ -145,11 +203,14 @@ async function handleIncoming(req, res) {
             if (text === 'orders' || text === '1') {
               await showOrderCategories(from);
               await conversation.setState(from, 'ordering');
-            } else if (text === 'support' || text === '2') {
-              await conversation.setState(from, 'support');
-              await sendMessage(from, '💬 *Support & Queries*\n\nPlease type your question and our team will respond shortly.\n\nType "menu" to return.');
+            } else if (text === 'track_order' || text === '2') {
+              await conversation.setState(from, 'awaiting_order_id');
+              await sendMessage(from, '📦 *Track Your Order*\n\nPlease enter your Order ID to check the status.\n\nYou can find the Order ID in your payment confirmation message.\n\nType "menu" to return.');
+            } else if (text === 'support' || text === '3') {
+              await conversation.setState(from, 'manual');
+              await sendMessage(from, '👨‍💼 You\'re now in *manual support* mode. Our team will assist you shortly.\n\nType "menu" anytime to return to the bot.');
             } else {
-              await sendMessage(from, "Please use the buttons above or type 1-2.");
+              await sendMessage(from, "Please use the buttons above or type 1-3.");
             }
             continue;
           }
@@ -428,17 +489,91 @@ async function handleIncoming(req, res) {
             continue;
           }
 
-          // Support queries
-          if (state === 'support') {
-            await sendButtonMessage(
-              from,
-              `✅ *Query Received*\n\nOur team will respond shortly.\n\nYour message:\n"${text}"`,
-              MAIN_MENU.buttons,
-              "Thank You"
-            );
-            await conversation.clearState(from);
+          // Track order - awaiting order ID input
+          if (state === 'awaiting_order_id') {
+            const orderId = text.trim();
+            
+            try {
+              // Validate MongoDB ObjectId format
+              if (!/^[0-9a-fA-F]{24}$/.test(orderId)) {
+                await sendMessage(from, '❌ Invalid Order ID format.\n\nPlease enter a valid Order ID or type "menu" to return.');
+                continue;
+              }
+              
+              // Fetch order from database
+              const order = await Order.findById(orderId);
+              
+              if (!order) {
+                await sendButtonMessage(
+                  from,
+                  `❌ *Order Not Found*\n\nNo order found with ID: ${orderId}\n\nPlease check your Order ID and try again.`,
+                  [
+                    { id: 'track_order', title: '🔍 Try Again' },
+                    { id: 'support', title: '💬 Contact Support' }
+                  ],
+                  'Order Not Found'
+                );
+                await conversation.setState(from, 'menu');
+                continue;
+              }
+              
+              // Status emoji mapping
+              const statusDisplay = {
+                'pending': '🛒 Order placed',
+                'confirmed': '✅ Payment confirmed',
+                'processing': '📦 Preparing',
+                'shipped': '🚚 Shipped',
+                'delivery': ' Out for delivery',
+                'delivered': '✨ Delivered',
+                'cancelled': '❌ Cancelled'
+              };
+              
+              // Get last update time
+              const now = new Date();
+              const istOffset = 5.5 * 60 * 60 * 1000;
+              const istTime = new Date(now.getTime() + istOffset);
+              const timeStr = istTime.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true });
+              
+              // Build status message with buttons
+              let statusMsg = `📦 Order Status\n\n`;
+              statusMsg += `Order ID: ${order._id}\n`;
+              statusMsg += `Status: ${statusDisplay[order.status] || order.status}\n`;
+              statusMsg += `Last updated: ${timeStr}`;
+              
+              // Add custom status message if provided by admin
+              if (order.statusMessage && order.statusMessage.trim()) {
+                statusMsg += `\n\n${order.statusMessage}`;
+              }
+              
+              // Send with buttons in one message
+              await sendButtonMessage(
+                from,
+                statusMsg,
+                [
+                  { id: 'track_order', title: '🔍 Track Another' },
+                  { id: 'main_menu', title: '🏠 Main Menu' }
+                ]
+              );
+              
+              await conversation.setState(from, 'menu');
+              
+            } catch (error) {
+              console.error('❌ Error fetching order:', error);
+              await sendButtonMessage(
+                from,
+                `❌ *Error*\n\nSorry, there was an error retrieving your order. Please try again or contact support.`,
+                [
+                  { id: 'track_order', title: '🔍 Try Again' },
+                  { id: 'support', title: '💬 Contact Support' }
+                ],
+                'Error'
+              );
+              await conversation.setState(from, 'menu');
+            }
             continue;
           }
+
+          // Support/manual state handled earlier
 
           // Fallback if no recognized state or trigger
           await sendMessage(from, "Send 'hi' to start. I can show a menu and help with orders and support.");
