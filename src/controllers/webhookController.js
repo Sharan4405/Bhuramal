@@ -124,15 +124,16 @@ async function handleIncoming(req, res) {
   try {
     // Verify webhook signature first
     if (!verifySignature(req)) {
-      console.error('🚫 Rejected webhook with invalid signature');
-      return res.sendStatus(403);
+      console.warn('⚠️  Invalid webhook signature - ignoring payload');
+      return res.sendStatus(200); // Return 200 to prevent retries
     }
     
     const body = req.body;
 
-    // Basic structure check
+    // Basic structure check - silently ignore invalid payloads
     if (!body.entry || !Array.isArray(body.entry)) {
-      return res.sendStatus(400);
+      console.log('⚠️  Invalid webhook payload structure - ignored');
+      return res.sendStatus(200); // Return 200 to prevent retries
     }
 
     // Iterate entries (could be batched)
@@ -264,9 +265,9 @@ async function handleIncoming(req, res) {
           }
           
           if (text === 'main_menu') {
-            // If already at main menu, ignore (stale button click)
-            if (state === 'menu') {
-              console.log('⏭️ Ignoring stale "Main Menu" button - already at menu');
+            // If already at main menu OR in active ordering flow, ignore (stale button click)
+            if (state === 'menu' || state === 'ordering' || state === 'selecting_item' || state === 'quantity_input' || state === 'cart_options') {
+              console.log('⏭️ Ignoring stale "Main Menu" button - user already moved on');
               continue;
             }
             await showMainMenu(from);
@@ -486,8 +487,12 @@ async function handleIncoming(req, res) {
                 totalAmount: cartSummary.totalAmount
               });
               
+              // Generate short order ID
+              const orderId = await Order.generateOrderId();
+              
               // Save order to database with all cart items
               const newOrder = new Order({
+                orderId: orderId,
                 customerName: customerName,
                 phoneNumber: from,
                 fullAddress: fullAddress,
@@ -498,7 +503,7 @@ async function handleIncoming(req, res) {
               });
               
               await newOrder.save();
-              console.log('✅ Order saved to database:', newOrder._id);
+              console.log('✅ Order saved to database:', orderId);
               
               // Create order description for payment
               const itemsDescription = cartSummary.items
@@ -530,7 +535,7 @@ async function handleIncoming(req, res) {
                 });
                 
                 // Send payment button with order summary
-                const orderSummary = `📦 *Order Summary*\n\n${itemsList}\n💰 *Total: ₹${cartSummary.totalAmount.toFixed(2)}*\n\n📍 *Delivery Address:*\n${fullAddress}\n\n🆔 Order ID: ${newOrder._id}\n\n💳 Complete your payment to confirm the order.\n\nPayment is secure via Razorpay 🔒`;
+                const orderSummary = `📦 *Order Summary*\n\n${itemsList}\n💰 *Total: ₹${cartSummary.totalAmount.toFixed(2)}*\n\n📍 *Delivery Address:*\n${fullAddress}\n\nOrder ID: ${newOrder.orderId}\n\n💳 Complete your payment to confirm the order.\n\nPayment is secure via Razorpay 🔒`;
                 
                 await sendUrlButton(
                   from,
@@ -547,7 +552,7 @@ async function handleIncoming(req, res) {
                 
                 await sendButtonMessage(
                   from,
-                  `❌ Unable to create payment link. Please try again or contact support.\n\n🆔 Order ID: ${newOrder._id}`,
+                  `❌ Unable to create payment link. Please try again or contact support.\n\nOrder ID: ${newOrder.orderId}`,
                   [
                     { id: 'orders', title: '🛒 Try Again' },
                     { id: 'support', title: '💬 Contact Support' }
@@ -582,14 +587,8 @@ async function handleIncoming(req, res) {
             const orderId = text.trim();
             
             try {
-              // Validate MongoDB ObjectId format
-              if (!/^[0-9a-fA-F]{24}$/.test(orderId)) {
-                await sendMessage(from, '❌ Invalid Order ID format.\n\nPlease enter a valid Order ID or type "menu" to return.');
-                continue;
-              }
-              
-              // Fetch order from database
-              const order = await Order.findById(orderId);
+              // Fetch order from database using custom orderId field
+              const order = await Order.findOne({ orderId: orderId });
               
               if (!order) {
                 await sendButtonMessage(
@@ -616,15 +615,22 @@ async function handleIncoming(req, res) {
                 'cancelled': '❌ Cancelled'
               };
               
-              // Get last update time
-              const now = new Date();
+              // Get last update time (convert UTC to IST)
+              const updatedAtUTC = order.updatedAt; // UTC time from database
               const istOffset = 5.5 * 60 * 60 * 1000;
-              const istTime = new Date(now.getTime() + istOffset);
-              const timeStr = istTime.toLocaleTimeString('en-IN', { hour: 'numeric', minute: '2-digit', hour12: true });
+              const istTime = new Date(updatedAtUTC.getTime() + istOffset);
+              
+              // Format time manually to avoid timezone issues
+              let hours = istTime.getUTCHours();
+              const minutes = istTime.getUTCMinutes();
+              const ampm = hours >= 12 ? 'PM' : 'AM';
+              hours = hours % 12;
+              hours = hours ? hours : 12; // 0 should be 12
+              const timeStr = `${hours}:${String(minutes).padStart(2, '0')} ${ampm}`;
               
               // Build status message with buttons
               let statusMsg = `📦 Order Status\n\n`;
-              statusMsg += `Order ID: ${order._id}\n`;
+              statusMsg += `Order ID: ${order.orderId}\n`;
               statusMsg += `Status: ${statusDisplay[order.status] || order.status}\n`;
               statusMsg += `Last updated: ${timeStr}`;
               

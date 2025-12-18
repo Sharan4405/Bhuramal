@@ -1,6 +1,9 @@
 import mongoose from 'mongoose';
 
 const orderSchema = new mongoose.Schema({
+  // Short readable Order ID
+  orderId: { type: String, unique: true, required: true },
+  
   // Customer Information
   customerName: { type: String, required: true, trim: true },
   phoneNumber: { type: String, required: true, trim: true },
@@ -46,15 +49,35 @@ const orderSchema = new mongoose.Schema({
   razorpaySignature: { type: String },
   paymentLink: { type: String }
 }, {
-  timestamps: false
+  timestamps: true // Stores in UTC, convert to IST when displaying
 });
 
-// Indexes for better query performance
+// Indexes for better query performance (orderId already indexed by unique:true)
 orderSchema.index({ phoneNumber: 1 });
 orderSchema.index({ orderDate: -1 });
 orderSchema.index({ status: 1 });
 
-
+// Static method to generate short Order ID
+orderSchema.statics.generateOrderId = async function() {
+  // Format: BBP-YYMMDD-XXXXX (e.g., BBP-251218-00001)
+  const now = new Date();
+  const istOffset = 5.5 * 60 * 60 * 1000;
+  const istDate = new Date(now.getTime() + istOffset);
+  
+  const year = istDate.getFullYear().toString().slice(-2);
+  const month = String(istDate.getMonth() + 1).padStart(2, '0');
+  const day = String(istDate.getDate()).padStart(2, '0');
+  const dateStr = `${year}${month}${day}`;
+  
+  // Find today's order count
+  const todayStart = istDate.toISOString().split('T')[0];
+  const todayOrdersCount = await this.countDocuments({
+    orderDate: todayStart
+  });
+  
+  const sequence = String(todayOrdersCount + 1).padStart(5, '0');
+  return `BBP-${dateStr}-${sequence}`;
+};
 
 // Instance methods
 orderSchema.methods.addItem = function(item) {

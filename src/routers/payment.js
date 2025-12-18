@@ -58,7 +58,7 @@ router.get('/callback', async (req, res) => {
                 `✅ Your order has been confirmed!\n\n` +
                 `📦 *Order Details:*\n${itemSummary}\n\n` +
                 `Amount Paid: ₹${order.totalAmount.toFixed(2)}\n` +
-                `Order ID: ${order._id}\n` +
+                `Order ID: ${order.orderId}\n` +
                 `Delivery Address:\n${order.fullAddress}\n\n` +
                 `🚚 We will contact you shortly for delivery.\n\n` +
                 `Thank you for choosing us!`,
@@ -107,7 +107,7 @@ router.get('/callback', async (req, res) => {
                 <div class="icon">✅</div>
                 <h1>Payment Successful!</h1>
                 <p>Your order has been confirmed.</p>
-                <div class="order-id">Order ID: ${order._id}</div>
+                <div class="order-id">Order ID: ${order.orderId}</div>
                 <p>A confirmation message has been sent to your WhatsApp.</p>
                 <a href="whatsapp://send?phone=${businessPhone}" class="btn">Open WhatsApp</a>
                 <p class="note">You can close this page now</p>
@@ -205,7 +205,7 @@ router.post('/webhook', express.json(), async (req, res) => {
               `✅ Your order has been confirmed!\n\n` +
               `📦 *Order Details:*\n${itemSummary}\n\n` +
               `Amount Paid: ₹${order.totalAmount.toFixed(2)}\n` +
-              `Order ID: ${order._id}\n` +
+              `Order ID: ${order.orderId}\n` +
               `*Delivery Address:*\n${order.fullAddress}\n\n` +
               `We will contact you shortly for delivery.\n\n` +
               `Thank you for choosing us! 🙏`;
