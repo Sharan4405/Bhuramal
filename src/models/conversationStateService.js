@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import ConversationModel from './conversation.model.js';
 
 // Configuration - exported for consistency
-export const ACTIVE_SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+export const ACTIVE_SESSION_TIMEOUT = 60 * 60 * 1000; // 60 minutes
 export const DATABASE_CLEANUP_DAYS = 30; // Delete after 30 days
 export const CLEANUP_INTERVAL = 5 * 24 * 60 * 60 * 1000; // Run cleanup every 5 days
 

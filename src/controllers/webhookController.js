@@ -48,14 +48,20 @@ async function showOrderCategories(from) {
 }
 
 async function showCategoryItems(from, category, items) {
-  const sections = [{
-    title: category,
-    rows: items.map((item, idx) => ({
-      id: `item_${idx}`,
-      title: item.name.substring(0, 24),
-      description: `${item.weight} ${item.unit} - ₹${item.price}`.substring(0, 72)
-    }))
-  }];
+  const sections = [
+    {
+      title: category,
+      rows: items.map((item, idx) => ({
+        id: `item_${idx}`,
+        title: item.name.substring(0, 24),
+        description: `${item.weight} ${item.unit} - ₹${item.price}`.substring(0, 72)
+      }))
+    },
+    {
+      title: "Navigation",
+      rows: [{ id: 'go_back_categories', title: '↩️ Back to Categories', description: 'Choose a different category' }]
+    }
+  ];
   
   await sendListMessage(from, `📦 *${category}*\n\nSelect an item:`, sections, "Select Item");
 }
@@ -195,16 +201,16 @@ async function handleIncoming(req, res) {
             continue;
           }
 
-          if (textLower === 'back' || text === 'back_to_category') {
+          // Global: "menu" keyword - works from ANY state (but not "main menu" text)
+          if (textLower === 'menu') {
             await conversation.setState(from, 'menu');
             await showMainMenu(from);
             continue;
           }
 
-          // Welcome message for explicit greetings only
-          if (/^hi$|^hello$/i.test(text)) {
+          if (textLower === 'back' || text === 'back_to_category') {
             await conversation.setState(from, 'menu');
-            await showMainMenu(from, userName);
+            await showMainMenu(from);
             continue;
           }
 
@@ -226,25 +232,51 @@ async function handleIncoming(req, res) {
             continue;
           }
 
-          // Handle expired/no state - auto-show menu on any first message
+          // Handle expired/no state - NEW SESSION, show welcome with name
           if (!state) {
             await conversation.setState(from, 'menu');
             await showMainMenu(from, userName);
             continue;
           }
 
-          // Manual mode: do not auto-respond until user types menu
+          // Existing session - user types hi/hello - show menu WITHOUT welcome
+          if (/^hi$|^hello$/i.test(text)) {
+            await conversation.setState(from, 'menu');
+            await showMainMenu(from); // No userName = no welcome message
+            continue;
+          }
+
+          // Manual mode: do not auto-respond (menu already handled above)
           if (state === 'manual') {
-            if (textLower === 'menu') {
-              await conversation.setState(from, 'menu');
-              await showMainMenu(from);
+            continue;
+          }
+
+          // Handle main menu buttons globally (from any state)
+          if (text === 'orders') {
+            // If already in ordering flow, ignore (stale button click)
+            if (state === 'ordering' || state === 'selecting_item' || state === 'quantity_input') {
+              console.log('⏭️ Ignoring stale "Order More" button - already ordering');
+              continue;
             }
+            await showOrderCategories(from);
+            await conversation.setState(from, 'ordering');
+            continue;
+          }
+          
+          if (text === 'main_menu') {
+            // If already at main menu, ignore (stale button click)
+            if (state === 'menu') {
+              console.log('⏭️ Ignoring stale "Main Menu" button - already at menu');
+              continue;
+            }
+            await showMainMenu(from);
+            await conversation.setState(from, 'menu');
             continue;
           }
 
           // Main menu handler
           if (state === 'menu') {
-            if (text === 'orders' || text === '1') {
+            if (text === '1') {
               await showOrderCategories(from);
               await conversation.setState(from, 'ordering');
             } else if (text === 'track_order' || text === '2') {
@@ -261,12 +293,6 @@ async function handleIncoming(req, res) {
 
           // Ordering handler - selecting category
           if (state === 'ordering') {
-            if (text.toLowerCase() === 'menu') {
-              await showMainMenu(from);
-              await conversation.setState(from, 'menu');
-              continue;
-            }
-
             // Parse category from list selection (format: order_cat_0)
             let selectedCategory = null;
             
@@ -292,9 +318,10 @@ async function handleIncoming(req, res) {
 
           // Selecting item handler
           if (state === 'selecting_item') {
-            if (text.toLowerCase() === 'menu') {
-              await showMainMenu(from);
-              await conversation.setState(from, 'menu');
+            // Handle go back to categories
+            if (text === 'go_back_categories') {
+              await showOrderCategories(from);
+              await conversation.setState(from, 'ordering');
               continue;
             }
 
@@ -328,13 +355,16 @@ async function handleIncoming(req, res) {
                 selectedItem: selectedItem,
                 selectedCategory: selectedCategory
               });
-              await sendMessage(
+              await sendButtonMessage(
                 from,
                 `📦 *${selectedItem.name}*\n\n` +
                 `📊 ${selectedItem.weight} ${selectedItem.unit} - ₹${selectedItem.price}\n` +
                 `💰 Price per gram: ₹${(selectedItem.price / selectedItem.weight).toFixed(2)}\n\n` +
                 `Please enter how many grams you want to order:\n` +
-                `Example: 250 (for 250 grams)`
+                `Example: 250 (for 250 grams)`,
+                [
+                  { id: 'go_back_items', title: '↩️ Go Back' }
+                ]
               );
             } else {
               await sendMessage(from, "Invalid item. Please select from the list above.");
@@ -344,6 +374,21 @@ async function handleIncoming(req, res) {
 
           // Quantity input (in grams)
           if (state === 'quantity_input') {
+            // Handle go back to item selection
+            if (text === 'go_back_items') {
+              const stateData = await conversation.getState(from, true);
+              const selectedCategory = stateData?.metadata?.selectedCategory;
+              if (selectedCategory) {
+                const categoryItems = await catalog.getItemsByCategory(selectedCategory);
+                await showCategoryItems(from, selectedCategory, categoryItems);
+                await conversation.setState(from, 'selecting_item', { selectedCategory });
+              } else {
+                await showOrderCategories(from);
+                await conversation.setState(from, 'ordering');
+              }
+              continue;
+            }
+
             const gramsRequested = parseInt(text);
             if (gramsRequested > 0) {
               const stateData = await conversation.getState(from, true);
@@ -495,8 +540,7 @@ async function handleIncoming(req, res) {
                   '💰 Payment Required'
                 );
                 
-                // Clear cart after successful order
-                cartService.clearCart(from);
+                // Note: Cart will be cleared after successful payment in payment webhook
               } else {
                 // Payment link creation failed
                 console.error('❌ Payment link creation failed:', paymentResult.error);

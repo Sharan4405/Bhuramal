@@ -5,7 +5,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimiter from 'express-rate-limit';
 import {connectDB} from './DB/connection.js';
-import {loadCatalog} from './services/catalogService.js';
+import {loadCatalog, refreshCatalog} from './services/catalogService.js';
 
 const app = express();
 
@@ -40,6 +40,16 @@ await loadCatalog();
 //Route for testing server status
 app.get('/health', (req, res) => {
   res.send('alive');
+});
+
+// Route to manually refresh catalog after MongoDB updates
+app.post('/refresh-catalog', async (req, res) => {
+  try {
+    await refreshCatalog();
+    res.json({ success: true, message: 'Catalog refreshed successfully' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
 });
 
 export default app;

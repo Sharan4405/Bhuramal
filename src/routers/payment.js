@@ -2,6 +2,8 @@ import express from 'express';
 import Order from '../models/Order.js';
 import { getPaymentLinkStatus } from '../services/paymentService.js';
 import { sendButtonMessage } from '../utils/whatsapp.js';
+import conversation from '../models/conversationStateService.js';
+import cartService from '../services/cartService.js';
 
 const router = express.Router();
 
@@ -52,21 +54,26 @@ router.get('/callback', async (req, res) => {
               
               await sendButtonMessage(
                 order.phoneNumber,
-                `🎉 *Payment Successful!*\n\n` +
+                `*Payment Successful!*\n\n` +
                 `✅ Your order has been confirmed!\n\n` +
                 `📦 *Order Details:*\n${itemSummary}\n\n` +
-                `💰 Amount Paid: ₹${order.totalAmount.toFixed(2)}\n` +
-                `🆔 Order ID: ${order._id}\n` +
-                `📍 *Delivery Address:*\n${order.fullAddress}\n\n` +
+                `Amount Paid: ₹${order.totalAmount.toFixed(2)}\n` +
+                `Order ID: ${order._id}\n` +
+                `Delivery Address:\n${order.fullAddress}\n\n` +
                 `🚚 We will contact you shortly for delivery.\n\n` +
-                `Thank you for choosing us! 🙏`,
+                `Thank you for choosing us!`,
                 [
                   { id: 'orders', title: '🛒 Order More' },
                   { id: 'main_menu', title: '🏠 Main Menu' }
                 ],
                 "Order Confirmed"
               );
-              console.log('📱 WhatsApp confirmation sent via callback');
+              
+              // Clear cart and reset conversation state after successful order
+              cartService.clearCart(order.phoneNumber);
+              await conversation.setState(order.phoneNumber, 'menu');
+              
+              console.log('📱 WhatsApp confirmation sent via callback, cart cleared');
             } catch (whatsappError) {
               console.error('⚠️ Failed to send WhatsApp confirmation:', whatsappError);
             }
@@ -197,10 +204,10 @@ router.post('/webhook', express.json(), async (req, res) => {
             const confirmationMessage = `🎉 *Payment Successful!*\n\n` +
               `✅ Your order has been confirmed!\n\n` +
               `📦 *Order Details:*\n${itemSummary}\n\n` +
-              `💰 Amount Paid: ₹${order.totalAmount.toFixed(2)}\n` +
-              `🆔 Order ID: ${order._id}\n` +
-              `📍 *Delivery Address:*\n${order.fullAddress}\n\n` +
-              `🚚 We will contact you shortly for delivery.\n\n` +
+              `Amount Paid: ₹${order.totalAmount.toFixed(2)}\n` +
+              `Order ID: ${order._id}\n` +
+              `*Delivery Address:*\n${order.fullAddress}\n\n` +
+              `We will contact you shortly for delivery.\n\n` +
               `Thank you for choosing us! 🙏`;
             
             await sendButtonMessage(

@@ -87,11 +87,21 @@ async function getCategoryByNumber(number) {
   return null;
 }
 
-
+/**
+ * Force reload catalog (clears cache)
+ * Use this after updating products in MongoDB
+ */
+async function refreshCatalog() {
+  catalogData = null;
+  lastLoadTime = null;
+  await loadCatalog();
+  return true;
+}
 
 export {
   loadCatalog,
   getCategories,
   getItemsByCategory,
-  getCategoryByNumber
+  getCategoryByNumber,
+  refreshCatalog
 };
