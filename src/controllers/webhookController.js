@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { sendMessage, sendButtonMessage, sendListMessage, sendUrlButton, sendLocation } from '../utils/whatsapp.js';
 import conversation from '../models/conversationStateService.js';
 import * as catalog from '../services/catalogService.js';
@@ -33,7 +34,7 @@ async function showMainMenu(from, userName = null) {
 
 // Helper to show order categories
 async function showOrderCategories(from) {
-  const categories = catalog.getCategories();
+  const categories = await catalog.getCategories();
   const sections = [{
     title: "Order Categories",
     rows: categories.map((cat, idx) => ({
@@ -75,9 +76,52 @@ function verifyWebhook(req, res) {
   res.sendStatus(400);
 }
 
+// Helper to verify webhook signature
+function verifySignature(req) {
+  const signature = req.headers['x-hub-signature-256'];
+  const appSecret = process.env.WHATSAPP_APP_SECRET;
+  
+  if (!appSecret) {
+    console.warn('⚠️  WHATSAPP_APP_SECRET not set - skipping signature verification');
+    return true; // Allow in development
+  }
+  
+  if (!signature) {
+    console.error('❌ Missing X-Hub-Signature-256 header');
+    return false;
+  }
+  
+  // Get raw body (captured before JSON parsing)
+  const rawBody = req.rawBody || JSON.stringify(req.body);
+  
+  // Calculate expected signature
+  const expectedSignature = 'sha256=' + crypto
+    .createHmac('sha256', appSecret)
+    .update(rawBody)
+    .digest('hex');
+  
+  // Compare signatures
+  const isValid = crypto.timingSafeEqual(
+    Buffer.from(signature),
+    Buffer.from(expectedSignature)
+  );
+  
+  if (!isValid) {
+    console.error('❌ Invalid webhook signature');
+  }
+  
+  return isValid;
+}
+
 // Handle incoming webhook events (messages)
 async function handleIncoming(req, res) {
   try {
+    // Verify webhook signature first
+    if (!verifySignature(req)) {
+      console.error('🚫 Rejected webhook with invalid signature');
+      return res.sendStatus(403);
+    }
+    
     const body = req.body;
 
     // Basic structure check
@@ -228,14 +272,14 @@ async function handleIncoming(req, res) {
             
             if (text.startsWith('order_cat_')) {
               const catIndex = parseInt(text.split('_')[2]);
-              const categories = catalog.getCategories();
+              const categories = await catalog.getCategories();
               selectedCategory = categories[catIndex];
             } else {
               // Fallback: direct text input
               selectedCategory = text.trim();
             }
             
-            const categoryItems = catalog.getItemsByCategory(selectedCategory);
+            const categoryItems = await catalog.getItemsByCategory(selectedCategory);
 
             if (categoryItems.length > 0) {
               await showCategoryItems(from, selectedCategory, categoryItems);
@@ -265,7 +309,7 @@ async function handleIncoming(req, res) {
               continue;
             }
             
-            const categoryItems = catalog.getItemsByCategory(selectedCategory);
+            const categoryItems = await catalog.getItemsByCategory(selectedCategory);
             let selectedItem = null;
             
             // Parse item from list selection (format: item_0)

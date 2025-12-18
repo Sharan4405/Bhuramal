@@ -3,16 +3,30 @@ import webhookRouter from './routers/webhook.js';
 import paymentRouter from './routers/payment.js';
 import cors from 'cors';
 import helmet from 'helmet';
+import rateLimiter from 'express-rate-limit';
 import {connectDB} from './DB/connection.js';
 import {loadCatalog} from './services/catalogService.js';
 
 const app = express();
 
-// built-in JSON parser
+// Trust proxy (required for ngrok/proxy environments)
+app.set('trust proxy', 1);
+
+// Capture raw body for webhook signature verification
+app.use('/webhook', express.json({
+  verify: (req, res, buf) => {
+    req.rawBody = buf.toString('utf8');
+  }
+}));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors('*'));
 app.use(helmet());
+app.use(rateLimiter({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 100 // limit each IP to 100 requests per windowMs
+}));
 
 // Mount routers
 app.use('/webhook', webhookRouter);
@@ -20,8 +34,8 @@ app.use('/payment', paymentRouter);
 
 await connectDB();
 
-// Load catalog on startup
-loadCatalog();
+// Load catalog on startup (async now)
+await loadCatalog();
 
 //Route for testing server status
 app.get('/health', (req, res) => {

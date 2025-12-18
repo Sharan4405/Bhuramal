@@ -1,79 +1,49 @@
-import XLSX from 'xlsx';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Path to your Excel file - adjust this to match your file location
-const EXCEL_FILE_PATH = path.join(__dirname, '../../data/Catalog.xlsx');
+import Product from '../models/Product.js';
 
 let catalogData = null;
+let lastLoadTime = null;
+const CACHE_DURATION = 5 * 60 * 1000; // Cache for 5 minutes
 
 /**
- * Load and parse Excel file
- * Expected Excel structure:
- * Column A: CATEGORY
- * Column B: ITEM
- * Column C: WEIGHT
- * Column D: UNIT
- * Column E: PRICE
+ * Load catalog from MongoDB
+ * Caches data for 5 minutes to reduce database queries
  */
-function loadCatalog() {
+async function loadCatalog() {
   try {
-    const workbook = XLSX.readFile(EXCEL_FILE_PATH);
-    const sheetName = workbook.SheetNames[0]; // First sheet
-    const worksheet = workbook.Sheets[sheetName];
-    const jsonData = XLSX.utils.sheet_to_json(worksheet);
-
-    // Debug first row
-    if (jsonData.length > 0) {
-      console.log('First row columns:', Object.keys(jsonData[0]));
-      console.log('Sample row data:', jsonData[0]);
+    // Return cached data if still valid
+    if (catalogData && lastLoadTime && (Date.now() - lastLoadTime < CACHE_DURATION)) {
+      return true;
     }
 
-    // Organize data by category
+    // Fetch all products from database
+    const products = await Product.find({ inStock: true }).sort({ category: 1, name: 1 });
+
+    // Organize data by category (same structure as before)
     const organized = {};
     
-    for (const row of jsonData) {
-      // Handle exact column names matching your Excel structure
-      const category = row.CATEGORY || '';
-      const itemName = row.ITEM || '';
-      const weight = row.WEIGHT || '';
-      const unit = row.UNIT || '';
-      const price = row.PRICE || '';
-
-      // Debug price extraction for first few rows
-      if (jsonData.indexOf(row) < 3) {
-        console.log(`Row ${jsonData.indexOf(row) + 1} debug:`, {
-          'Available keys': Object.keys(row),
-          'row.PRICE': row.PRICE,
-          'row["PRICE "]': row['PRICE '],
-          'Final price': price
-        });
-      }
-
-      // Skip rows with no item name
-      if (!itemName || !itemName.trim()) continue;
+    for (const product of products) {
+      const category = product.category;
 
       if (!organized[category]) {
         organized[category] = [];
       }
 
       organized[category].push({
-        name: itemName.trim(),
-        weight: weight,
-        unit: unit,
-        price: price
+        name: product.name,
+        weight: product.weight,
+        unit: product.unit,
+        price: product.price
       });
     }
 
     catalogData = organized;
-    console.log('✅ Catalog loaded successfully');
+    lastLoadTime = Date.now();
+    
+    console.log('✅ Catalog loaded from MongoDB');
     console.log(`📦 Categories: ${Object.keys(catalogData).join(', ')}`);
     return true;
   } catch (error) {
-    console.error('❌ Error loading catalog:', error.message);
+    console.error('❌ Error loading catalog from MongoDB:', error.message);
     return false;
   }
 }
@@ -81,9 +51,9 @@ function loadCatalog() {
 /**
  * Get all categories
  */
-function getCategories() {
+async function getCategories() {
   if (!catalogData) {
-    loadCatalog();
+    await loadCatalog();
   }
   return Object.keys(catalogData || {});
 }
@@ -91,9 +61,9 @@ function getCategories() {
 /**
  * Get items in a specific category
  */
-function getItemsByCategory(category) {
+async function getItemsByCategory(category) {
   if (!catalogData) {
-    loadCatalog();
+    await loadCatalog();
   }
   
   // Case-insensitive search
@@ -107,8 +77,8 @@ function getItemsByCategory(category) {
 /**
  * Search for a category by number (e.g., user types "1" for first category)
  */
-function getCategoryByNumber(number) {
-  const categories = getCategories();
+async function getCategoryByNumber(number) {
+  const categories = await getCategories();
   const index = parseInt(number) - 1;
   
   if (index >= 0 && index < categories.length) {
