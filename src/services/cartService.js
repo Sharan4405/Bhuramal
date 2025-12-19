@@ -68,7 +68,6 @@ class CartService {
       cart.updatedAt = Date.now();
       this.carts.set(userId, cart);
 
-      console.log(`✅ Cart updated for ${userId}:`, cart.items.length, 'items');
       return { success: true, cart };
     } catch (error) {
       console.error('❌ Error adding item to cart:', error);
@@ -106,7 +105,6 @@ class CartService {
    */
   clearCart(userId) {
     this.carts.delete(userId);
-    console.log(`🗑️  Cart cleared for ${userId}`);
   }
 
   /**
@@ -178,10 +176,6 @@ class CartService {
           this.carts.delete(userId);
           cleaned++;
         }
-      }
-      
-      if (cleaned > 0) {
-        console.log(`🧹 Cleaned up ${cleaned} inactive carts`);
       }
     }, 5 * 60 * 1000); // Check every 5 minutes
   }

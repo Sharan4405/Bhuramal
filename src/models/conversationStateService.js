@@ -76,13 +76,9 @@ export async function cleanupOldStates() {
   const cutoffDate = new Date(Date.now() - (DATABASE_CLEANUP_DAYS * 24 * 60 * 60 * 1000));
   
   try {
-    const result = await ConversationModel.deleteMany({
+    await ConversationModel.deleteMany({
       updatedAt: { $lt: cutoffDate }
     }).exec();
-    
-    if (result.deletedCount > 0) {
-      console.log(`🗑️  Cleaned up ${result.deletedCount} old conversation states (older than ${DATABASE_CLEANUP_DAYS} days)`);
-    }
   } catch (error) {
     console.error('Error cleaning up old states:', error);
   }

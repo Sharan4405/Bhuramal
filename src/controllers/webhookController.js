@@ -148,7 +148,6 @@ async function handleIncoming(req, res) {
 
           // Skip if already processed this message ID
           if (global.processedMessages?.has(messageId)) {
-            console.log(`⏭️  Skipping duplicate message ID: ${messageId}`);
             continue;
           }
           if (!global.processedMessages) global.processedMessages = new Set();
@@ -198,7 +197,13 @@ async function handleIncoming(req, res) {
           // Global: switch to manual support from anywhere
           if (text === 'support') {
             await conversation.setState(from, 'manual');
-            await sendMessage(from, '👨‍💼 You\'re now in *manual support* mode. Our team will assist you shortly.\n\nType "menu" anytime to return to the bot.');
+            await sendButtonMessage(
+              from,
+              '👨‍💼 You\'re now in *manual support* mode. Our team will assist you shortly.\n\nType "menu" anytime to return to the bot.',
+              [
+                { id: 'view_address', title: '📍 View Address' }
+              ]
+            );
             continue;
           }
 
@@ -216,7 +221,7 @@ async function handleIncoming(req, res) {
           }
 
           // Global: address/location queries from any state (single interactive message)
-          if (/\b(address|location|where\s+are\s+you|store\s+location|shop\s+address|map)\b/i.test(textLower)) {
+          if (/\b(address|location|where\s+are\s+you|store\s+location|shop\s+address|map)\b/i.test(textLower) || text === 'view_address') {
             const mapsLink = STORE_MAPS_QUERY
               ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(STORE_MAPS_QUERY)}`
               : (Number.isFinite(STORE_LAT) && Number.isFinite(STORE_LNG))
@@ -256,7 +261,6 @@ async function handleIncoming(req, res) {
           if (text === 'orders') {
             // If already in ordering flow, ignore (stale button click)
             if (state === 'ordering' || state === 'selecting_item' || state === 'quantity_input') {
-              console.log('⏭️ Ignoring stale "Order More" button - already ordering');
               continue;
             }
             await showOrderCategories(from);
@@ -267,7 +271,6 @@ async function handleIncoming(req, res) {
           if (text === 'main_menu') {
             // If already at main menu OR in active ordering flow, ignore (stale button click)
             if (state === 'menu' || state === 'ordering' || state === 'selecting_item' || state === 'quantity_input' || state === 'cart_options') {
-              console.log('⏭️ Ignoring stale "Main Menu" button - user already moved on');
               continue;
             }
             await showMainMenu(from);
@@ -285,7 +288,13 @@ async function handleIncoming(req, res) {
               await sendMessage(from, '📦 *Track Your Order*\n\nPlease enter your Order ID to check the status.\n\nYou can find the Order ID in your payment confirmation message.\n\nType "menu" to return.');
             } else if (text === 'support' || text === '3') {
               await conversation.setState(from, 'manual');
-              await sendMessage(from, '👨‍💼 You\'re now in *manual support* mode. Our team will assist you shortly.\n\nType "menu" anytime to return to the bot.');
+              await sendButtonMessage(
+                from,
+                '👨‍💼 You\'re now in *manual support* mode. Our team will assist you shortly.\n\nType "menu" anytime to return to the bot.',
+                [
+                  { id: 'view_address', title: '📍 View Address' }
+                ]
+              );
             } else {
               await sendMessage(from, "Please use the buttons above or type 1-3.");
             }
@@ -443,8 +452,6 @@ async function handleIncoming(req, res) {
 
           // Cart options handler
           if (state === 'cart_options') {
-            console.log(`🛒 Cart options - User: ${from}, Text: "${text}", State: ${state}`);
-            
             if (text === 'add_more') {
               await showOrderCategories(from);
               await conversation.setState(from, 'ordering');
@@ -479,14 +486,7 @@ async function handleIncoming(req, res) {
             }
             
             try {
-              console.log('💾 Saving order to database:', {
-                customerName,
-                phoneNumber: from,
-                items: cartSummary.items,
-                totalItems: cartSummary.totalItems,
-                totalAmount: cartSummary.totalAmount
-              });
-              
+
               // Generate short order ID
               const orderId = await Order.generateOrderId();
               
@@ -503,7 +503,6 @@ async function handleIncoming(req, res) {
               });
               
               await newOrder.save();
-              console.log('✅ Order saved to database:', orderId);
               
               // Create order description for payment
               const itemsDescription = cartSummary.items
@@ -525,8 +524,6 @@ async function handleIncoming(req, res) {
                 newOrder.razorpayOrderId = paymentResult.paymentLinkId;
                 newOrder.paymentStatus = 'initiated';
                 await newOrder.save();
-                
-                console.log('✅ Payment link created:', paymentResult.paymentLink);
                 
                 // Format cart items for display
                 let itemsList = '';
@@ -615,24 +612,10 @@ async function handleIncoming(req, res) {
                 'cancelled': '❌ Cancelled'
               };
               
-              // Get last update time (convert UTC to IST)
-              const updatedAtUTC = order.updatedAt; // UTC time from database
-              const istOffset = 5.5 * 60 * 60 * 1000;
-              const istTime = new Date(updatedAtUTC.getTime() + istOffset);
-              
-              // Format time manually to avoid timezone issues
-              let hours = istTime.getUTCHours();
-              const minutes = istTime.getUTCMinutes();
-              const ampm = hours >= 12 ? 'PM' : 'AM';
-              hours = hours % 12;
-              hours = hours ? hours : 12; // 0 should be 12
-              const timeStr = `${hours}:${String(minutes).padStart(2, '0')} ${ampm}`;
-              
               // Build status message with buttons
               let statusMsg = `📦 Order Status\n\n`;
               statusMsg += `Order ID: ${order.orderId}\n`;
-              statusMsg += `Status: ${statusDisplay[order.status] || order.status}\n`;
-              statusMsg += `Last updated: ${timeStr}`;
+              statusMsg += `Status: ${statusDisplay[order.status] || order.status}`;
               
               // Add custom status message if provided by admin
               if (order.statusMessage && order.statusMessage.trim()) {

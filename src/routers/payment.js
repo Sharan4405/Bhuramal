@@ -15,11 +15,6 @@ router.get('/callback', async (req, res) => {
   try {
     const { razorpay_payment_link_id, razorpay_payment_id, razorpay_signature } = req.query;
     
-    console.log('💳 Payment callback received:', {
-      linkId: razorpay_payment_link_id,
-      paymentId: razorpay_payment_id
-    });
-    
     if (!razorpay_payment_link_id) {
       return res.status(400).send('Payment link ID is required');
     }
@@ -42,8 +37,6 @@ router.get('/callback', async (req, res) => {
           order.razorpaySignature = razorpay_signature;
           order.status = 'confirmed';
           await order.save();
-          
-          console.log('✅ Payment completed for order:', order._id);
           
           // Send WhatsApp confirmation ONLY if not already sent
           if (!wasAlreadyCompleted) {
@@ -72,13 +65,9 @@ router.get('/callback', async (req, res) => {
               // Clear cart and reset conversation state after successful order
               cartService.clearCart(order.phoneNumber);
               await conversation.setState(order.phoneNumber, 'menu');
-              
-              console.log('📱 WhatsApp confirmation sent via callback, cart cleared');
             } catch (whatsappError) {
               console.error('⚠️ Failed to send WhatsApp confirmation:', whatsappError);
             }
-          } else {
-            console.log('⏭️  Skipping duplicate confirmation (already sent)');
           }
           
           // Redirect back to WhatsApp app
@@ -164,21 +153,11 @@ router.post('/webhook', express.json(), async (req, res) => {
   try {
     const event = req.body;
     
-    console.log('🔔 Razorpay webhook received:', {
-      event: event.event,
-      timestamp: new Date().toISOString()
-    });
-    
     // Handle different event types
     switch (event.event) {
       case 'payment_link.paid':
         const paymentLinkId = event.payload.payment_link.entity.id;
         const paymentId = event.payload.payment.entity.id;
-        
-        console.log('📋 Processing payment_link.paid webhook:', {
-          paymentLinkId,
-          paymentId
-        });
         
         // Update order status
         const order = await Order.findOne({ razorpayOrderId: paymentLinkId });
@@ -193,7 +172,6 @@ router.post('/webhook', express.json(), async (req, res) => {
           order.razorpayPaymentId = paymentId;
           order.status = 'confirmed';
           await order.save();
-          console.log('✅ Order payment confirmed via webhook:', order._id);
           
           // Send WhatsApp confirmation notification
           try {
@@ -219,13 +197,9 @@ router.post('/webhook', express.json(), async (req, res) => {
               ],
               "Order Confirmed"
             );
-            
-            console.log('📱 WhatsApp payment confirmation sent successfully to:', order.phoneNumber);
           } catch (whatsappError) {
-            console.error('⚠️  Failed to send WhatsApp confirmation:', whatsappError.message);
+            console.error('⚠️ Failed to send WhatsApp confirmation:', whatsappError.message);
           }
-        } else {
-          console.log('⏭️  Webhook: Order already completed, skipping duplicate notification');
         }
         break;
         

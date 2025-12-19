@@ -79,6 +79,22 @@ orderSchema.statics.generateOrderId = async function() {
   return `BBP-${dateStr}-${sequence}`;
 };
 
+// Middleware to ensure updatedAt is always updated on findOneAndUpdate, updateOne, etc.
+orderSchema.pre('findOneAndUpdate', function(next) {
+  this.set({ updatedAt: new Date() });
+  next();
+});
+
+orderSchema.pre('updateOne', function(next) {
+  this.set({ updatedAt: new Date() });
+  next();
+});
+
+orderSchema.pre('updateMany', function(next) {
+  this.set({ updatedAt: new Date() });
+  next();
+});
+
 // Instance methods
 orderSchema.methods.addItem = function(item) {
   this.items.push(item);

@@ -2,7 +2,7 @@ import Product from '../models/Product.js';
 
 let catalogData = null;
 let lastLoadTime = null;
-const CACHE_DURATION = 5 * 60 * 1000; // Cache for 5 minutes
+const CACHE_DURATION = 1 * 60 * 1000; // Cache for 1 minute
 
 /**
  * Load catalog from MongoDB
@@ -39,8 +39,6 @@ async function loadCatalog() {
     catalogData = organized;
     lastLoadTime = Date.now();
     
-    console.log('✅ Catalog loaded from MongoDB');
-    console.log(`📦 Categories: ${Object.keys(catalogData).join(', ')}`);
     return true;
   } catch (error) {
     console.error('❌ Error loading catalog from MongoDB:', error.message);

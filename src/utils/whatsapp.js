@@ -57,7 +57,6 @@ function buildInteractiveBody(to, interactive) {
 
 export async function sendMessage(to, text) {
   if (!checkCredentials()) {
-    console.log(`Skipping sendMessage to ${to} because credentials are missing. Message would be: ${text}`);
     return;
   }
 
@@ -73,7 +72,6 @@ export async function sendMessage(to, text) {
 // Send interactive button message (up to 3 buttons)
 export async function sendButtonMessage(to, bodyText, buttons, headerText = null, footerText = null) {
   if (!checkCredentials()) {
-    console.log(`Skipping sendButtonMessage to ${to} because credentials are missing.`);
     return;
   }
 
@@ -97,7 +95,6 @@ export async function sendButtonMessage(to, bodyText, buttons, headerText = null
 // Send interactive list message (up to 10 items per section, 10 sections max)
 export async function sendListMessage(to, bodyText, sections, buttonText = "View Options", headerText = null, footerText = null) {
   if (!checkCredentials()) {
-    console.log(`Skipping sendListMessage to ${to} because credentials are missing.`);
     return;
   }
 
@@ -123,7 +120,6 @@ export async function sendListMessage(to, bodyText, sections, buttonText = "View
 // Send message with URL button (Call-to-Action button)
 export async function sendUrlButton(to, bodyText, buttonText, url, headerText = null, footerText = null) {
   if (!checkCredentials()) {
-    console.log(`Skipping sendUrlButton to ${to} because credentials are missing.`);
     return;
   }
 
@@ -145,7 +141,6 @@ export async function sendUrlButton(to, bodyText, buttonText, url, headerText = 
 // Send native WhatsApp location (requires latitude and longitude)
 export async function sendLocation(to, latitude, longitude, name = null, address = null) {
   if (!checkCredentials()) {
-    console.log(`Skipping sendLocation to ${to} because credentials are missing.`);
     return;
   }
 

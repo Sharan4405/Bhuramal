@@ -42,7 +42,6 @@ export async function createPaymentLink(orderData) {
       }
     });
 
-    console.log('✅ Payment link created:', paymentLink.id);
     return {
       success: true,
       paymentLinkId: paymentLink.id,
