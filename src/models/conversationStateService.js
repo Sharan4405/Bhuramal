@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import ConversationModel from './conversation.model.js';
 
 // Configuration - exported for consistency
-export const ACTIVE_SESSION_TIMEOUT = 60 * 60 * 1000; // 60 minutes
+export const ACTIVE_SESSION_TIMEOUT = 3 * 60 * 60 * 1000; // 3 hours (180 minutes)
 export const DATABASE_CLEANUP_DAYS = 30; // Delete after 30 days
 export const CLEANUP_INTERVAL = 5 * 24 * 60 * 60 * 1000; // Run cleanup every 5 days
 
@@ -23,9 +23,9 @@ export async function getState(senderId, includeMetadata = false) {
     const elapsed = now - updatedAt;
 
     if (elapsed > ACTIVE_SESSION_TIMEOUT) {
-      // Expired, delete it
+      // Expired, delete it and return 'expired' marker
       await ConversationModel.deleteOne({ senderId }).exec();
-      return null;
+      return includeMetadata ? { state: null, expired: true } : null;
     }
 
     return includeMetadata ? doc : doc.state;
@@ -38,7 +38,7 @@ export async function getState(senderId, includeMetadata = false) {
   const elapsed = Date.now() - entry.timestamp;
   if (elapsed > ACTIVE_SESSION_TIMEOUT) {
     mem.delete(senderId);
-    return null;
+    return includeMetadata ? { state: null, expired: true } : null;
   }
 
   return includeMetadata ? entry : entry.state;

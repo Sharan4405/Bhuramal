@@ -4,6 +4,7 @@ import conversation from '../models/conversationStateService.js';
 import * as catalog from '../services/catalogService.js';
 import Order from '../models/Order.js';
 import Message from '../models/Message.js';
+import Conversation from '../models/conversation.model.js';
 import { createPaymentLink } from '../services/paymentService.js';
 import cartService from '../services/cartService.js';
 
@@ -214,13 +215,34 @@ async function handleIncoming(req, res) {
             continue;
           }
 
-          // 💾 Save incoming message
-          await Message.create({
-            user: from,
-            text,
-            direction: 'IN',
-            timestamp: new Date()
-          });
+          // 💾 Save incoming message (async, doesn't block reply)
+          (async () => {
+            try {
+              let conv = await Conversation.findOne({ user: from });
+              if (!conv) {
+                conv = await Conversation.create({
+                  user: from,
+                  senderId: from,
+                  lastMessageAt: new Date(),
+                  lastMessage: text
+                });
+              } else {
+                conv.lastMessageAt = new Date();
+                conv.lastMessage = text;
+                await conv.save();
+              }
+              
+              await Message.create({
+                conversationId: conv._id,
+                user: from,
+                text,
+                direction: 'IN',
+                timestamp: new Date()
+              });
+            } catch (err) {
+              console.error('Error saving incoming message:', err.message);
+            }
+          })();
 
           const textLower = text.toLowerCase();
           const state = await conversation.getState(from);
@@ -245,9 +267,17 @@ async function handleIncoming(req, res) {
             continue;
           }
 
-          // Handle expired/no state - NEW SESSION, show welcome with name
+          // Handle expired/no state
           if (!state) {
-            await navigateToMenu(from, userName);
+            // Check if session expired (had previous state but timed out)
+            const metadata = await conversation.getState(from, true);
+            if (metadata && metadata.expired) {
+              await sendMessage(from, `⏱️ *Session Expired*\n\nYour previous session has expired due to inactivity.\n\nPlease start a new order from the menu below.`);
+              await navigateToMenu(from);
+            } else {
+              // New user - show welcome with name
+              await navigateToMenu(from, userName);
+            }
             continue;
           }
 

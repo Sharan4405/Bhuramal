@@ -1,5 +1,6 @@
 import axios from 'axios';
 import Message from '../models/Message.js';
+import Conversation from '../models/conversation.model.js';
 
 const API_VERSION = process.env.WHATSAPP_API_VERSION || 'v22.0';
 const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
@@ -59,7 +60,24 @@ function buildInteractiveBody(to, interactive) {
 // 💾 Helper to save outgoing message
 async function saveOutgoingMessage(to, text) {
   try {
+    // Find or create conversation
+    let conversation = await Conversation.findOne({ user: to });
+    if (!conversation) {
+      conversation = await Conversation.create({
+        user: to,
+        senderId: to,
+        lastMessageAt: new Date(),
+        lastMessage: text
+      });
+    } else {
+      conversation.lastMessageAt = new Date();
+      conversation.lastMessage = text;
+      await conversation.save();
+    }
+    
+    // Save message with conversationId
     await Message.create({
+      conversationId: conversation._id,
       user: to,
       text,
       direction: 'OUT',

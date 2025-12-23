@@ -22,6 +22,11 @@ const ConversationSchema = new mongoose.Schema({
     index: true
   },
   
+  lastMessage: {
+    type: String,
+    default: ''
+  },
+  
   currentFlow: { 
     type: String, 
     enum: ['MENU', 'ORDER', 'TRACK', 'SUPPORT', null],

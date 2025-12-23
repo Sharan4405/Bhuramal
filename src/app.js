@@ -1,6 +1,9 @@
 import express from 'express';
 import webhookRouter from './routers/webhook.js';
 import paymentRouter from './routers/payment.js';
+import authRouter from './routers/auth.js';
+import conversationRouter from './routers/conversation.js';
+import messageRouter from './routers/message.js';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimiter from 'express-rate-limit';
@@ -31,6 +34,9 @@ app.use(rateLimiter({
 // Mount routers
 app.use('/webhook', webhookRouter);
 app.use('/payment', paymentRouter);
+app.use('/api/auth', authRouter);
+app.use('/api/conversations', conversationRouter);
+app.use('/api/messages', messageRouter);
 
 await connectDB();
 
