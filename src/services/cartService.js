@@ -1,16 +1,13 @@
 /**
  * Cart Service - Manages shopping cart for multiple items
  * Production-ready with validation and error handling
+ * Cart persists for session duration (no separate timeout)
  */
 
 class CartService {
   constructor() {
     // In-memory cart storage (user phone number as key)
     this.carts = new Map();
-    
-    // Auto-cleanup carts after 30 minutes of inactivity
-    this.CART_TIMEOUT = 30 * 60 * 1000; // 30 minutes
-    this.startCleanupTimer();
   }
 
   /**
@@ -161,23 +158,6 @@ class CartService {
     message += `💰 *Total Amount: ₹${summary.totalAmount.toFixed(2)}*`;
     
     return message;
-  }
-
-  /**
-   * Auto-cleanup old carts (prevent memory leaks)
-   */
-  startCleanupTimer() {
-    setInterval(() => {
-      const now = Date.now();
-      let cleaned = 0;
-      
-      for (const [userId, cart] of this.carts.entries()) {
-        if (now - cart.updatedAt > this.CART_TIMEOUT) {
-          this.carts.delete(userId);
-          cleaned++;
-        }
-      }
-    }, 5 * 60 * 1000); // Check every 5 minutes
   }
 
   /**

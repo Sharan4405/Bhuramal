@@ -1,8 +1,9 @@
 import crypto from 'crypto';
-import { sendMessage, sendButtonMessage, sendListMessage, sendUrlButton, sendLocation } from '../utils/whatsapp.js';
+import { sendMessage, sendButtonMessage, sendListMessage, sendUrlButton } from '../utils/whatsapp.js';
 import conversation from '../models/conversationStateService.js';
 import * as catalog from '../services/catalogService.js';
 import Order from '../models/Order.js';
+import Message from '../models/Message.js';
 import { createPaymentLink } from '../services/paymentService.js';
 import cartService from '../services/cartService.js';
 
@@ -22,6 +23,39 @@ const STORE_LAT = process.env.STORE_LATITUDE ? parseFloat(process.env.STORE_LATI
 const STORE_LNG = process.env.STORE_LONGITUDE ? parseFloat(process.env.STORE_LONGITUDE) : null;
 const STORE_MAPS_QUERY = process.env.STORE_MAPS_QUERY ? process.env.STORE_MAPS_QUERY.trim() : null;
 const STORE_MAPS_LINK = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(STORE_ADDRESS)}`;
+
+// 🔧 Helper to navigate to menu (reusable)
+async function navigateToMenu(from, userName = null) {
+  await conversation.setState(from, 'menu');
+  await showMainMenu(from, userName);
+}
+
+// 🔧 Helper to navigate to manual support (reusable)
+async function navigateToSupport(from) {
+  await conversation.setState(from, 'manual');
+  await sendButtonMessage(
+    from,
+    '👨‍💼 You\'re now in *manual support* mode. Our team will assist you shortly.\n\nType "menu" anytime to return to the bot.',
+    [{ id: 'view_address', title: '📍 View Address' }]
+  );
+}
+
+// 🔧 Helper to send store location (reusable)
+async function sendStoreLocation(from) {
+  const mapsLink = STORE_MAPS_QUERY
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(STORE_MAPS_QUERY)}`
+    : (Number.isFinite(STORE_LAT) && Number.isFinite(STORE_LNG))
+      ? `https://www.google.com/maps/search/?api=1&query=${STORE_LAT},${STORE_LNG}`
+      : STORE_MAPS_LINK;
+
+  await sendUrlButton(
+    from,
+    `📍 *Store Address*\n${STORE_ADDRESS}\n\nTap the button below to open the location in Google Maps.`,
+    'View Location',
+    mapsLink,
+    '📍 Location'
+  );
+}
 
 // Helper to send main menu
 async function showMainMenu(from, userName = null) {
@@ -163,13 +197,11 @@ async function handleIncoming(req, res) {
 
           // Handle different message types
           let text = '';
-          let interactiveResponse = null;
 
           if (message.text && message.text.body) {
             text = message.text.body.trim();
           } else if (message.interactive) {
             // Handle button/list responses
-            interactiveResponse = message.interactive;
             if (message.interactive.button_reply) {
               text = message.interactive.button_reply.id; // Use button ID as text
             } else if (message.interactive.list_reply) {
@@ -182,73 +214,46 @@ async function handleIncoming(req, res) {
             continue;
           }
 
+          // 💾 Save incoming message
+          await Message.create({
+            user: from,
+            text,
+            direction: 'IN',
+            timestamp: new Date()
+          });
+
           const textLower = text.toLowerCase();
           const state = await conversation.getState(from);
           
           console.log(`📝 Message from ${from}: "${text}" | State: ${state || 'null'}`);
 
           // Global commands: menu and back
-          if (textLower === 'menu' || text === 'main_menu') {
-            await conversation.setState(from, 'menu');
-            await showMainMenu(from);
+          if (textLower === 'menu' || text === 'main_menu' || textLower === 'back' || text === 'back_to_category') {
+            await navigateToMenu(from);
             continue;
           }
 
           // Global: switch to manual support from anywhere
           if (text === 'support') {
-            await conversation.setState(from, 'manual');
-            await sendButtonMessage(
-              from,
-              '👨‍💼 You\'re now in *manual support* mode. Our team will assist you shortly.\n\nType "menu" anytime to return to the bot.',
-              [
-                { id: 'view_address', title: '📍 View Address' }
-              ]
-            );
-            continue;
-          }
-
-          // Global: "menu" keyword - works from ANY state (but not "main menu" text)
-          if (textLower === 'menu') {
-            await conversation.setState(from, 'menu');
-            await showMainMenu(from);
-            continue;
-          }
-
-          if (textLower === 'back' || text === 'back_to_category') {
-            await conversation.setState(from, 'menu');
-            await showMainMenu(from);
+            await navigateToSupport(from);
             continue;
           }
 
           // Global: address/location queries from any state (single interactive message)
           if (/\b(address|location|where\s+are\s+you|store\s+location|shop\s+address|map)\b/i.test(textLower) || text === 'view_address') {
-            const mapsLink = STORE_MAPS_QUERY
-              ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(STORE_MAPS_QUERY)}`
-              : (Number.isFinite(STORE_LAT) && Number.isFinite(STORE_LNG))
-                ? `https://www.google.com/maps/search/?api=1&query=${STORE_LAT},${STORE_LNG}`
-                : STORE_MAPS_LINK;
-
-            await sendUrlButton(
-              from,
-              `📍 *Store Address*\n${STORE_ADDRESS}\n\nTap the button below to open the location in Google Maps.`,
-              'View Location',
-              mapsLink,
-              '📍 Location'
-            );
+            await sendStoreLocation(from);
             continue;
           }
 
           // Handle expired/no state - NEW SESSION, show welcome with name
           if (!state) {
-            await conversation.setState(from, 'menu');
-            await showMainMenu(from, userName);
+            await navigateToMenu(from, userName);
             continue;
           }
 
           // Existing session - user types hi/hello - show menu WITHOUT welcome
           if (/^hi$|^hello$/i.test(text)) {
-            await conversation.setState(from, 'menu');
-            await showMainMenu(from); // No userName = no welcome message
+            await navigateToMenu(from); // No userName = no welcome message
             continue;
           }
 
@@ -267,34 +272,12 @@ async function handleIncoming(req, res) {
             await conversation.setState(from, 'ordering');
             continue;
           }
-          
-          if (text === 'main_menu') {
-            // If already at main menu OR in active ordering flow, ignore (stale button click)
-            if (state === 'menu' || state === 'ordering' || state === 'selecting_item' || state === 'quantity_input' || state === 'cart_options') {
-              continue;
-            }
-            await showMainMenu(from);
-            await conversation.setState(from, 'menu');
-            continue;
-          }
 
           // Main menu handler
           if (state === 'menu') {
-            if (text === '1') {
-              await showOrderCategories(from);
-              await conversation.setState(from, 'ordering');
-            } else if (text === 'track_order' || text === '2') {
+            if (text === 'track_order' || text === '2') {
               await conversation.setState(from, 'awaiting_order_id');
               await sendMessage(from, '📦 *Track Your Order*\n\nPlease enter your Order ID to check the status.\n\nYou can find the Order ID in your payment confirmation message.\n\nType "menu" to return.');
-            } else if (text === 'support' || text === '3') {
-              await conversation.setState(from, 'manual');
-              await sendButtonMessage(
-                from,
-                '👨‍💼 You\'re now in *manual support* mode. Our team will assist you shortly.\n\nType "menu" anytime to return to the bot.',
-                [
-                  { id: 'view_address', title: '📍 View Address' }
-                ]
-              );
             } else {
               await sendMessage(from, "Please use the buttons above or type 1-3.");
             }
@@ -341,8 +324,7 @@ async function handleIncoming(req, res) {
             
             if (!selectedCategory) {
               await sendMessage(from, "Session expired. Please start over.");
-              await showMainMenu(from);
-              await conversation.setState(from, 'menu');
+              await navigateToMenu(from);
               continue;
             }
             
@@ -368,11 +350,11 @@ async function handleIncoming(req, res) {
               await sendButtonMessage(
                 from,
                 `📦 *${selectedItem.name}*\n\n` +
-                `📊 ${selectedItem.weight} ${selectedItem.unit} - ₹${selectedItem.price}\n` +
-                `💰 Price per gram: ₹${(selectedItem.price / selectedItem.weight).toFixed(2)}\n\n` +
-                `Please enter how many grams you want to order:\n` +
-                `Example: 250 (for 250 grams)`,
+                `📊 ${selectedItem.weight} ${selectedItem.unit} - ₹${selectedItem.price}\n\n` +
+                `Please select the quantity you want to order:`,
                 [
+                  { id: 'qty_250', title: '250 gm' },
+                  { id: 'qty_500', title: '500 gm' },
                   { id: 'go_back_items', title: '↩️ Go Back' }
                 ]
               );
@@ -385,7 +367,7 @@ async function handleIncoming(req, res) {
           // Quantity input (in grams)
           if (state === 'quantity_input') {
             // Handle go back to item selection
-            if (text === 'go_back_items') {
+            if (text === 'go_back_items' || textLower === 'back') {
               const stateData = await conversation.getState(from, true);
               const selectedCategory = stateData?.metadata?.selectedCategory;
               if (selectedCategory) {
@@ -399,23 +381,27 @@ async function handleIncoming(req, res) {
               continue;
             }
 
-            const gramsRequested = parseInt(text);
-            if (gramsRequested > 0) {
-              const stateData = await conversation.getState(from, true);
-              const selectedItem = stateData?.metadata?.selectedItem;
-              
-              if (!selectedItem) {
-                await sendMessage(from, "❌ Session expired. Please start over.");
-                await showMainMenu(from);
-                await conversation.setState(from, 'menu');
-                continue;
-              }
-              
-              // Calculate price based on grams requested
-              const catalogWeight = parseFloat(selectedItem.weight);
-              const catalogPrice = parseFloat(selectedItem.price);
-              const pricePerGram = catalogPrice / catalogWeight;
-              const totalPrice = pricePerGram * gramsRequested;
+            // Parse quantity from button selection
+            let gramsRequested = 0;
+            if (text === 'qty_250') {
+              gramsRequested = 250;
+            } else if (text === 'qty_500') {
+              gramsRequested = 500;
+            } else {
+              await sendMessage(from, "Please use the buttons above to select quantity.");
+              continue;
+            }
+
+            const stateData = await conversation.getState(from, true);
+            const selectedItem = stateData?.metadata?.selectedItem;
+            
+            if (!selectedItem) {
+              await sendMessage(from, "❌ Session expired. Please start over.");
+              await navigateToMenu(from);
+              continue;
+            }
+            
+            const totalPrice = parseFloat(selectedItem.price);
               
               // Add item to cart with calculated price
               const cartResult = cartService.addItem(from, {
@@ -444,9 +430,6 @@ async function handleIncoming(req, res) {
               );
               
               await conversation.setState(from, 'cart_options');
-            } else {
-              await sendMessage(from, "Please enter a valid number of grams (e.g., 250)");
-            }
             continue;
           }
 
@@ -480,8 +463,7 @@ async function handleIncoming(req, res) {
             
             if (cartSummary.items.length === 0) {
               await sendMessage(from, "🛒 Your cart is empty. Please add items first.");
-              await showMainMenu(from);
-              await conversation.setState(from, 'menu');
+              await navigateToMenu(from);
               continue;
             }
             

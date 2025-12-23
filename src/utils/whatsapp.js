@@ -1,4 +1,5 @@
 import axios from 'axios';
+import Message from '../models/Message.js';
 
 const API_VERSION = process.env.WHATSAPP_API_VERSION || 'v22.0';
 const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
@@ -55,6 +56,20 @@ function buildInteractiveBody(to, interactive) {
   };
 }
 
+// 💾 Helper to save outgoing message
+async function saveOutgoingMessage(to, text) {
+  try {
+    await Message.create({
+      user: to,
+      text,
+      direction: 'OUT',
+      timestamp: new Date()
+    });
+  } catch (err) {
+    console.error('Error saving outgoing message:', err.message);
+  }
+}
+
 export async function sendMessage(to, text) {
   if (!checkCredentials()) {
     return;
@@ -66,7 +81,13 @@ export async function sendMessage(to, text) {
     text: { body: text }
   };
 
-  return makeWhatsAppRequest(body, 'sendMessage');
+  const result = await makeWhatsAppRequest(body, 'sendMessage');
+  
+  if (result) {
+    await saveOutgoingMessage(to, text);
+  }
+  
+  return result;
 }
 
 // Send interactive button message (up to 3 buttons)
@@ -89,7 +110,13 @@ export async function sendButtonMessage(to, bodyText, buttons, headerText = null
     }
   }, headerText, footerText);
 
-  return makeWhatsAppRequest(buildInteractiveBody(to, interactive), 'sendButtonMessage');
+  const result = await makeWhatsAppRequest(buildInteractiveBody(to, interactive), 'sendButtonMessage');
+  
+  if (result) {
+    await saveOutgoingMessage(to, bodyText);
+  }
+  
+  return result;
 }
 
 // Send interactive list message (up to 10 items per section, 10 sections max)
@@ -114,7 +141,13 @@ export async function sendListMessage(to, bodyText, sections, buttonText = "View
     }
   }, headerText, footerText);
 
-  return makeWhatsAppRequest(buildInteractiveBody(to, interactive), 'sendListMessage');
+  const result = await makeWhatsAppRequest(buildInteractiveBody(to, interactive), 'sendListMessage');
+  
+  if (result) {
+    await saveOutgoingMessage(to, bodyText);
+  }
+  
+  return result;
 }
 
 // Send message with URL button (Call-to-Action button)
@@ -135,7 +168,13 @@ export async function sendUrlButton(to, bodyText, buttonText, url, headerText = 
     }
   }, headerText, footerText);
 
-  return makeWhatsAppRequest(buildInteractiveBody(to, interactive), 'sendUrlButton');
+  const result = await makeWhatsAppRequest(buildInteractiveBody(to, interactive), 'sendUrlButton');
+  
+  if (result) {
+    await saveOutgoingMessage(to, bodyText);
+  }
+  
+  return result;
 }
 
 // Send native WhatsApp location (requires latitude and longitude)
@@ -156,5 +195,11 @@ export async function sendLocation(to, latitude, longitude, name = null, address
     }
   };
 
-  return makeWhatsAppRequest(body, 'sendLocation');
+  const result = await makeWhatsAppRequest(body, 'sendLocation');
+  
+  if (result) {
+    await saveOutgoingMessage(to, `📍 Location: ${name || address || 'Shared location'}`);
+  }
+  
+  return result;
 }

@@ -25,7 +25,7 @@ app.use(cors('*'));
 app.use(helmet());
 app.use(rateLimiter({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 100 // limit each IP to 100 requests per windowMs
+  max: 150 // limit each IP to 150 requests per windowMs
 }));
 
 // Mount routers
@@ -35,8 +35,7 @@ app.use('/payment', paymentRouter);
 await connectDB();
 
 // Load catalog on startup (async now)
-await loadCatalog();
-
+await loadCatalog()
 //Route for testing server status
 app.get('/health', (req, res) => {
   res.send('alive');
