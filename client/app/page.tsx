@@ -30,13 +30,12 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[rgb(var(--orange))] to-orange-500">
+    <div className="min-h-screen flex items-center justify-center bg-white">
       <div className="card w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-[rgb(var(--orange))] mb-2">
-            🌰 Bhuramal Dashboard
+             Admin Login
           </h1>
-          <p className="text-gray-600">Admin Login</p>
         </div>
 
         <form onSubmit={handleLogin}>
@@ -66,7 +65,7 @@ export default function LoginPage() {
           <Button
             type="submit"
             disabled={loading}
-            className="w-full"
+            className="btn-primary w-full"
           >
             {loading ? 'Logging in...' : 'Login'}
           </Button>

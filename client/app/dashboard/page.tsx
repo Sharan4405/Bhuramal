@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { api, auth } from '@/lib/api';
+import { api, auth } from '@/lib/api';                                        
 import { DashboardHeader } from '@/components/dashboard/Header';
 import { FilterButtons } from '@/components/dashboard/FilterButtons';
 import { ConversationCard } from '@/components/dashboard/ConversationCard';
@@ -36,10 +36,14 @@ export default function DashboardPage() {
       const status = filter === 'ALL' ? undefined : filter;
       const data = await api.getConversations(token, status);
       setConversations(data.conversations);
-    } catch (err) {
-      console.error(err);
-      auth.removeToken();
-      router.push('/');
+    } catch (err: any) {
+      console.error('Failed to fetch conversations:', err);
+      console.error('Error details:', err.message);
+      // Only redirect to login if it's an auth error (401)
+      if (err.message?.includes('401') || err.message?.includes('Unauthorized')) {
+        auth.removeToken();
+        router.push('/');
+      }
     } finally {
       setLoading(false);
     }

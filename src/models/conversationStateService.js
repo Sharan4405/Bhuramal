@@ -48,7 +48,11 @@ export async function setState(senderId, value, metadata = {}) {
   if (usingDb()) {
     await ConversationModel.findOneAndUpdate(
       { user: senderId },
-      { state: value, metadata },
+      { 
+        state: value, 
+        metadata,
+        lastMessageAt: new Date() // Update timestamp when state changes
+      },
       { upsert: true, new: true }
     ).exec();
     return;

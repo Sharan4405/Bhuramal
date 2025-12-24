@@ -227,9 +227,16 @@ async function handleIncoming(req, res) {
                   lastMessage: text
                 });
               } else {
-                conv.lastMessageAt = new Date();
-                conv.lastMessage = text;
-                await conv.save();
+                // Only update message fields, preserve state
+                await Conversation.updateOne(
+                  { user: from },
+                  { 
+                    $set: { 
+                      lastMessageAt: new Date(),
+                      lastMessage: text 
+                    }
+                  }
+                );
               }
               
               await Message.create({

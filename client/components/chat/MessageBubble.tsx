@@ -20,7 +20,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           message.direction === 'OUT' ? 'text-right' : 'text-left'
         }`}
       >
-        {new Date(message.timestamp).toLocaleTimeString()}
+        {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
       </p>
     </div>
   );

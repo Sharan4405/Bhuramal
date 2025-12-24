@@ -27,7 +27,10 @@ export const api = {
     const res = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (!res.ok) throw new Error('Failed to fetch conversations');
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`Failed to fetch conversations: ${res.status} - ${errorText}`);
+    }
     return res.json();
   },
 

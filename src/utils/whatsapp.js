@@ -109,13 +109,7 @@ export async function sendMessage(to, text) {
     text: { body: text }
   };
 
-  const result = await makeWhatsAppRequest(body, 'sendMessage');
-  
-  if (result) {
-    await saveOutgoingMessage(to, text);
-  }
-  
-  return result;
+  return await makeWhatsAppRequest(body, 'sendMessage');
 }
 
 // Send interactive button message (up to 3 buttons)
