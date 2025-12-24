@@ -1,6 +1,7 @@
 import axios from 'axios';
 import Message from '../models/Message.js';
 import Conversation from '../models/conversation.model.js';
+import { notifyNewMessage } from '../services/socketService.js';
 
 const API_VERSION = process.env.WHATSAPP_API_VERSION || 'v22.0';
 const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID;
@@ -65,7 +66,6 @@ async function saveOutgoingMessage(to, text) {
     if (!conversation) {
       conversation = await Conversation.create({
         user: to,
-        senderId: to,
         lastMessageAt: new Date(),
         lastMessage: text
       });
@@ -76,12 +76,22 @@ async function saveOutgoingMessage(to, text) {
     }
     
     // Save message with conversationId
-    await Message.create({
+    const savedMessage = await Message.create({
       conversationId: conversation._id,
       user: to,
       text,
       direction: 'OUT',
       timestamp: new Date()
+    });
+
+    // Notify dashboard in real-time
+    notifyNewMessage(conversation._id.toString(), {
+      _id: savedMessage._id.toString(),
+      conversationId: conversation._id,
+      user: to,
+      text,
+      direction: 'OUT',
+      timestamp: savedMessage.timestamp
     });
   } catch (err) {
     console.error('Error saving outgoing message:', err.message);

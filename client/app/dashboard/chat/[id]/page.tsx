@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import { io, Socket } from 'socket.io-client';
 import { api, auth } from '@/lib/api';
 import { ChatHeader } from '@/components/chat/ChatHeader';
 import { ChatInput } from '@/components/chat/ChatInput';
@@ -16,9 +17,11 @@ interface Message {
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [status, setStatus] = useState<'OPEN' | 'RESOLVED'>('OPEN');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const socketRef = useRef<Socket | null>(null);
   const router = useRouter();
   const params = useParams();
   const conversationId = params.id as string;
@@ -29,12 +32,56 @@ export default function ChatPage() {
       router.push('/');
       return;
     }
+    loadConversation(token);
     loadMessages(token);
+
+    // Initialize WebSocket connection
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    socketRef.current = io(apiUrl, {
+      transports: ['websocket', 'polling']
+    });
+
+    // Join conversation room
+    socketRef.current.emit('join-conversation', conversationId);
+
+    // Listen for new messages in real-time
+    socketRef.current.on('new-message', (newMessage: Message) => {
+      setMessages((prev) => {
+        // Avoid duplicates
+        if (prev.some(msg => msg._id === newMessage._id)) {
+          return prev;
+        }
+        return [...prev, newMessage];
+      });
+    });
+
+    // Cleanup on unmount
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.emit('leave-conversation', conversationId);
+        socketRef.current.disconnect();
+      }
+    };
   }, [conversationId, router]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  const loadConversation = async (token: string) => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/conversations?status=`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      const conv = data.conversations.find((c: any) => c._id === conversationId);
+      if (conv) {
+        setStatus(conv.status);
+      }
+    } catch (err) {
+      console.error('Failed to load conversation:', err);
+    }
+  };
 
   const loadMessages = async (token: string) => {
     try {
@@ -54,7 +101,7 @@ export default function ChatPage() {
     setSending(true);
     try {
       await api.sendMessage(token, conversationId, message);
-      loadMessages(token);
+      // No need to reload - WebSocket will notify us
     } catch (err) {
       alert('Failed to send message');
     } finally {
@@ -68,9 +115,21 @@ export default function ChatPage() {
     
     try {
       await api.resolveConversation(token, conversationId);
-      router.push('/dashboard');
+      setStatus('RESOLVED');
     } catch (err) {
       alert('Failed to resolve conversation');
+    }
+  };
+
+  const handleReopen = async () => {
+    const token = auth.getToken();
+    if (!token) return;
+    
+    try {
+      await api.reopenConversation(token, conversationId);
+      setStatus('OPEN');
+    } catch (err) {
+      alert('Failed to reopen conversation');
     }
   };
 
@@ -78,7 +137,9 @@ export default function ChatPage() {
     <div className="h-screen flex flex-col">
       <ChatHeader 
         onBack={() => router.push('/dashboard')} 
-        onResolve={handleResolve} 
+        onResolve={handleResolve}
+        onReopen={handleReopen}
+        status={status}
       />
 
       <div className="flex-1 overflow-y-auto p-8 bg-gray-50">

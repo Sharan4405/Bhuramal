@@ -7,6 +7,7 @@ import Message from '../models/Message.js';
 import Conversation from '../models/conversation.model.js';
 import { createPaymentLink } from '../services/paymentService.js';
 import cartService from '../services/cartService.js';
+import { notifyNewMessage } from '../services/socketService.js';
 
 // Main menu configuration
 const MAIN_MENU = {
@@ -222,7 +223,6 @@ async function handleIncoming(req, res) {
               if (!conv) {
                 conv = await Conversation.create({
                   user: from,
-                  senderId: from,
                   lastMessageAt: new Date(),
                   lastMessage: text
                 });
@@ -233,6 +233,16 @@ async function handleIncoming(req, res) {
               }
               
               await Message.create({
+                conversationId: conv._id,
+                user: from,
+                text,
+                direction: 'IN',
+                timestamp: new Date()
+              });
+
+              // Notify dashboard in real-time
+              notifyNewMessage(conv._id.toString(), {
+                _id: Date.now().toString(),
                 conversationId: conv._id,
                 user: from,
                 text,

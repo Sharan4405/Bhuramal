@@ -14,7 +14,7 @@ function usingDb() {
 
 export async function getState(senderId, includeMetadata = false) {
   if (usingDb()) {
-    const doc = await ConversationModel.findOne({ senderId }).lean().exec();
+    const doc = await ConversationModel.findOne({ user: senderId }).lean().exec();
     if (!doc) return null;
 
     // Check if state expired (30 min for active sessions)
@@ -24,7 +24,7 @@ export async function getState(senderId, includeMetadata = false) {
 
     if (elapsed > ACTIVE_SESSION_TIMEOUT) {
       // Expired, delete it and return 'expired' marker
-      await ConversationModel.deleteOne({ senderId }).exec();
+      await ConversationModel.deleteOne({ user: senderId }).exec();
       return includeMetadata ? { state: null, expired: true } : null;
     }
 
@@ -47,7 +47,7 @@ export async function getState(senderId, includeMetadata = false) {
 export async function setState(senderId, value, metadata = {}) {
   if (usingDb()) {
     await ConversationModel.findOneAndUpdate(
-      { senderId },
+      { user: senderId },
       { state: value, metadata },
       { upsert: true, new: true }
     ).exec();
@@ -63,7 +63,7 @@ export async function setState(senderId, value, metadata = {}) {
 
 export async function clearState(senderId) {
   if (usingDb()) {
-    await ConversationModel.deleteOne({ senderId }).exec();
+    await ConversationModel.deleteOne({ user: senderId }).exec();
     return;
   }
   mem.delete(senderId);
