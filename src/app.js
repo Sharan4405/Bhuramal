@@ -4,6 +4,8 @@ import paymentRouter from './routers/payment.js';
 import authRouter from './routers/auth.js';
 import conversationRouter from './routers/conversation.js';
 import messageRouter from './routers/message.js';
+import productRouter from './routers/product.js';
+import orderRouter from './routers/order.js';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimiter from 'express-rate-limit';
@@ -37,6 +39,8 @@ app.use('/payment', paymentRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/conversations', conversationRouter);
 app.use('/api/messages', messageRouter);
+app.use('/api/products', productRouter);
+app.use('/api/orders', orderRouter);
 
 await connectDB();
 
