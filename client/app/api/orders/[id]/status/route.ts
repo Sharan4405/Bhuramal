@@ -4,19 +4,20 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const token = request.headers.get('authorization');
     const body = await request.json();
+    const { id } = await params;
     
     console.log('Order status update request:', {
-      orderId: params.id,
+      orderId: id,
       status: body.status,
       hasToken: !!token
     });
     
-    const response = await fetch(`${API_URL}/api/orders/${params.id}/status`, {
+    const response = await fetch(`${API_URL}/api/orders/${id}/status`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',

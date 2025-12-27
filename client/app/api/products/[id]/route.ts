@@ -4,13 +4,14 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const token = request.headers.get('authorization');
     const body = await request.json();
+    const { id } = await params;
     
-    const response = await fetch(`${API_URL}/api/products/${params.id}`, {
+    const response = await fetch(`${API_URL}/api/products/${id}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -32,12 +33,13 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const token = request.headers.get('authorization');
+    const { id } = await params;
     
-    const response = await fetch(`${API_URL}/api/products/${params.id}`, {
+    const response = await fetch(`${API_URL}/api/products/${id}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',

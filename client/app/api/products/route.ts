@@ -8,6 +8,8 @@ export async function GET(request: NextRequest) {
     const queryString = searchParams.toString();
     const url = `${API_URL}/api/products${queryString ? `?${queryString}` : ''}`;
     
+    console.log('Fetching products from:', url);
+    
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -16,11 +18,13 @@ export async function GET(request: NextRequest) {
     });
 
     const data = await response.json();
+    console.log('Products response:', { status: response.status, success: data.success });
     return NextResponse.json(data, { status: response.status });
-  } catch (error) {
-    console.error('Error fetching products:', error);
+  } catch (error: any) {
+    console.error('Error fetching products:', error.message);
+    console.error('API_URL:', API_URL);
     return NextResponse.json(
-      { success: false, message: 'Failed to fetch products' },
+      { success: false, message: `Failed to fetch products: ${error.message}` },
       { status: 500 }
     );
   }

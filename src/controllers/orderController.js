@@ -3,10 +3,17 @@ import { asyncHandler, successResponse, errorResponse, notFoundResponse, validat
 
 // Helper to find order by _id or orderId
 const findOrder = async (id) => {
-  let order = await Order.findById(id).catch(() => null);
-  if (!order) {
-    order = await Order.findOne({ orderId: id });
+  try {
+    // Try to find by MongoDB _id first
+    let order = await Order.findById(id);
+    if (order) return order;
+  } catch (error) {
+    // If invalid ObjectId format, skip to orderId search
+    console.log('Invalid ObjectId format, searching by orderId:', id);
   }
+  
+  // If not found by _id or invalid format, try orderId
+  const order = await Order.findOne({ orderId: id });
   return order;
 };
 
@@ -91,30 +98,35 @@ export const getOrderById = asyncHandler(async (req, res) => {
 
 // Update order status
 export const updateOrderStatus = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  const { status } = req.body;
-  
-  console.log('Updating order status:', { id, status });
-  
-  // Validate status
-  const validStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivery', 'delivered', 'cancelled'];
-  if (!validStatuses.includes(status)) {
-    return validationError(res, `Invalid status. Must be one of: ${validStatuses.join(', ')}`);
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    
+    console.log('Updating order status:', { id, status });
+    
+    // Validate status
+    const validStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivery', 'delivered', 'cancelled'];
+    if (!validStatuses.includes(status)) {
+      return validationError(res, `Invalid status. Must be one of: ${validStatuses.join(', ')}`);
+    }
+    
+    const order = await findOrder(id);
+    
+    if (!order) {
+      console.log('Order not found:', id);
+      return notFoundResponse(res, 'Order');
+    }
+    
+    console.log('Found order:', order.orderId);
+    order.status = status;
+    await order.save();
+    
+    console.log('Order status updated successfully');
+    return successResponse(res, { data: order }, `Order status updated to ${status}`);
+  } catch (error) {
+    console.error('Error in updateOrderStatus:', error);
+    throw error; // Let asyncHandler handle it
   }
-  
-  const order = await findOrder(id);
-  
-  if (!order) {
-    console.log('Order not found:', id);
-    return notFoundResponse(res, 'Order');
-  }
-  
-  console.log('Found order:', order.orderId);
-  order.status = status;
-  await order.save();
-  
-  console.log('Order status updated successfully');
-  return successResponse(res, { data: order }, `Order status updated to ${status}`);
 });
 
 // Update full order

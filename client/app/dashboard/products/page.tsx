@@ -16,7 +16,6 @@ interface Product {
   unit: string;
   price: number;
   inStock: boolean;
-  description?: string;
 }
 
 export default function ProductsPage() {
@@ -36,8 +35,7 @@ export default function ProductsPage() {
     weight: '',
     unit: 'gm',
     price: '',
-    inStock: true,
-    description: ''
+    inStock: true
   });
 
   useEffect(() => {
@@ -150,8 +148,7 @@ export default function ProductsPage() {
       weight: product.weight,
       unit: product.unit,
       price: product.price.toString(),
-      inStock: product.inStock,
-      description: product.description || ''
+      inStock: product.inStock
     });
     setShowAddModal(true);
   };
@@ -163,8 +160,7 @@ export default function ProductsPage() {
       weight: '',
       unit: 'gm',
       price: '',
-      inStock: true,
-      description: ''
+      inStock: true
     });
   };
 
@@ -180,35 +176,35 @@ export default function ProductsPage() {
       <div className="min-h-screen bg-gray-50 pb-20 md:pb-6">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 md:py-6">
           {/* Header */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Products</h1>
-              <p className="text-sm text-gray-600 mt-1">{products.length} total products</p>
+          <div className="mb-8">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">Product Management</h1>
+                <p className="text-base text-gray-600">Manage your product catalog - {products.length} total products</p>
+              </div>
+              <button 
+                onClick={() => setShowAddModal(true)}
+                className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white px-6 py-3 rounded-lg font-semibold flex items-center gap-2 shadow-md hover:shadow-lg transition-all"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Add Product
+              </button>
             </div>
-          <button 
-            onClick={() => setShowAddModal(true)}
-            className="btn-primary w-full sm:w-auto flex items-center justify-center gap-2"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Add Product
-          </button>
-        </div>
+          </div>
 
         {/* Search Bar */}
-        <div className="mb-4">
-          <div className="relative">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <Input
-              placeholder="Search products..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
+        <div className="mb-4 relative">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            placeholder="Search products..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[rgb(var(--orange))] focus:ring-4 focus:ring-[rgb(var(--orange))]/10 transition-all"
+          />
         </div>
 
         {/* Filter Toggle Button (Mobile) */}
@@ -458,17 +454,6 @@ export default function ProductsPage() {
                   <label htmlFor="inStock" className="font-medium text-gray-700 cursor-pointer">
                     Product is in stock
                   </label>
-                </div>
-
-                <div>
-                  <label className="block mb-2 font-medium text-gray-700">Description (Optional)</label>
-                  <textarea
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[rgb(var(--orange))] focus:ring-2 focus:ring-[rgb(var(--orange))]/20"
-                    rows={3}
-                    value={formData.description}
-                    onChange={(e) => setFormData({...formData, description: e.target.value})}
-                    placeholder="Additional product details..."
-                  />
                 </div>
 
                 <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4">

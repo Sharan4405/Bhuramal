@@ -54,20 +54,24 @@ export default function DashboardPage() {
       <AdminNav />
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-          <div className="mb-6">
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Conversations</h1>
-            <p className="text-sm text-gray-600 mt-1">Manage customer conversations and chats</p>
+          <div className="mb-8">
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">Conversations</h1>
+            <p className="text-base text-gray-600">Manage customer conversations and chats in real-time</p>
           </div>
 
           <FilterButtons currentFilter={filter} onFilterChange={setFilter} />
 
           {loading ? (
-            <div className="text-center py-12 text-gray-600">
-              Loading...
+            <div className="flex justify-center items-center py-20">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[rgb(var(--orange))]"></div>
             </div>
           ) : conversations.length === 0 ? (
-            <div className="card text-center py-12 text-gray-600">
-              No conversations found
+            <div className="bg-white rounded-lg shadow-sm text-center py-16 px-4">
+              <svg className="mx-auto h-16 w-16 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+              <p className="text-gray-500 text-lg font-medium">No conversations found</p>
+              <p className="text-gray-400 text-sm mt-2">New conversations will appear here</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

@@ -79,7 +79,7 @@ export function OrderTable({ orders, onView, getStatusBadgeVariant, getPaymentSt
                   <td className="px-6 py-4">
                     <button 
                       onClick={() => onView(order)}
-                      className="text-sm px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors font-medium"
+                      className="text-sm px-3 py-1.5 text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 rounded-lg transition-all font-medium shadow-sm"
                     >
                       View
                     </button>

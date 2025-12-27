@@ -11,7 +11,6 @@ interface ProductFormModalProps {
     unit: string;
     price: string;
     inStock: boolean;
-    description: string;
   };
   categories: string[];
   onSubmit: (e: React.FormEvent) => void;
@@ -124,17 +123,6 @@ export function ProductFormModal({
             <label htmlFor="inStock" className="font-medium text-gray-700 cursor-pointer">
               Product is in stock
             </label>
-          </div>
-
-          <div>
-            <label className="block mb-2 font-medium text-gray-700">Description (Optional)</label>
-            <textarea
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[rgb(var(--orange))] focus:ring-2 focus:ring-[rgb(var(--orange))]/20"
-              rows={3}
-              value={formData.description}
-              onChange={(e) => onChange('description', e.target.value)}
-              placeholder="Additional product details..."
-            />
           </div>
 
           <div className="flex flex-col-reverse sm:flex-row gap-3 pt-4">

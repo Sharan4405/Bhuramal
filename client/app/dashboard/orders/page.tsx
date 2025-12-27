@@ -48,13 +48,13 @@ interface Stats {
 }
 
 const STATUS_OPTIONS = [
-  { value: 'pending', label: 'Pending', color: 'gray', icon: '⏱️' },
-  { value: 'confirmed', label: 'Confirmed', color: 'blue', icon: '✓' },
-  { value: 'processing', label: 'Processing', color: 'yellow', icon: '⚙️' },
-  { value: 'shipped', label: 'Shipped', color: 'purple', icon: '📦' },
-  { value: 'delivery', label: 'Out for Delivery', color: 'indigo', icon: '🚚' },
-  { value: 'delivered', label: 'Delivered', color: 'success', icon: '✅' },
-  { value: 'cancelled', label: 'Cancelled', color: 'error', icon: '❌' }
+  { value: 'pending', label: 'Pending', color: 'gray' },
+  { value: 'confirmed', label: 'Confirmed', color: 'blue' },
+  { value: 'processing', label: 'Processing', color: 'yellow' },
+  { value: 'shipped', label: 'Shipped', color: 'purple' },
+  { value: 'delivery', label: 'Out for Delivery', color: 'indigo' },
+  { value: 'delivered', label: 'Delivered', color: 'success' },
+  { value: 'cancelled', label: 'Cancelled', color: 'error' }
 ];
 
 export default function OrdersPage() {
@@ -127,6 +127,16 @@ export default function OrdersPage() {
 
     console.log('Updating order:', orderId, 'to status:', newStatus);
     
+    // Optimistic update - update UI immediately
+    const updatedOrders = orders.map(order => 
+      order._id === orderId ? { ...order, status: newStatus } : order
+    );
+    setOrders(updatedOrders);
+    
+    if (selectedOrder?._id === orderId) {
+      setSelectedOrder({ ...selectedOrder, status: newStatus });
+    }
+    
     try {
       const response = await fetch(`/api/orders/${orderId}/status`, {
         method: 'PATCH',
@@ -142,18 +152,29 @@ export default function OrdersPage() {
       
       if (response.ok && data.success) {
         alert(`✅ Order status updated to ${newStatus}`);
-        await fetchOrders();
-        await fetchStats();
+        // Update with actual data from server
+        const updatedOrdersFromServer = orders.map(order => 
+          order._id === orderId ? data.data : order
+        );
+        setOrders(updatedOrdersFromServer);
+        
         if (selectedOrder?._id === orderId) {
           setSelectedOrder(data.data);
         }
+        
+        // Only fetch stats if needed (no full order refetch)
+        fetchStats();
       } else {
         console.error('Failed to update:', data);
         alert(`❌ ${data.message || 'Failed to update status'}`);
+        // Revert optimistic update on error
+        await fetchOrders();
       }
     } catch (error) {
       console.error('Error updating status:', error);
       alert('❌ Network error. Please try again.');
+      // Revert optimistic update on error
+      await fetchOrders();
     }
   };
 
@@ -176,68 +197,56 @@ export default function OrdersPage() {
     <>
       <AdminNav />
       <div className="min-h-screen bg-gray-50 pb-20 md:pb-6">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 md:py-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 md:py-8">
           {/* Header */}
-          <div className="mb-6">
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Orders</h1>
-            <p className="text-sm text-gray-600 mt-1">Manage and track all customer orders</p>
+          <div className="mb-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">Order Management</h1>
+                <p className="text-base text-gray-600">Track and manage all customer orders in real-time</p>
+              </div>
+              <div className="hidden md:block">
+                <div className="bg-linear-to-r from-orange-500 to-orange-600 text-white px-6 py-3 rounded-lg shadow-lg">
+                  <div className="text-sm font-medium opacity-90">Total Orders</div>
+                  <div className="text-3xl font-bold">{stats?.totalOrders || 0}</div>
+                </div>
+              </div>
+            </div>
           </div>
 
         {/* Stats Cards */}
         {stats && (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6">
-            <Card className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-xs md:text-sm text-gray-600">Total Orders</div>
-                  <div className="text-xl md:text-2xl font-bold text-gray-900 mt-1">{stats.totalOrders}</div>
-                </div>
-                <div className="text-2xl md:text-3xl">📊</div>
-              </div>
+            <Card className="p-4 hover:shadow-md transition-shadow">
+              <div className="text-xs md:text-sm text-gray-600 font-medium mb-1">Total Orders</div>
+              <div className="text-2xl md:text-3xl font-bold text-gray-900">{stats.totalOrders}</div>
             </Card>
-            <Card className="p-4 bg-gradient-to-br from-orange-50 to-white border-orange-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-xs md:text-sm text-orange-600 font-medium">Revenue</div>
-                  <div className="text-xl md:text-2xl font-bold text-orange-700 mt-1">₹{stats.totalRevenue.toLocaleString()}</div>
-                </div>
-                <div className="text-2xl md:text-3xl">💰</div>
-              </div>
+            <Card className="p-4 bg-linear-to-br from-orange-50 to-white border-orange-100 hover:shadow-md transition-shadow">
+              <div className="text-xs md:text-sm text-orange-600 font-semibold mb-1">Revenue</div>
+              <div className="text-2xl md:text-3xl font-bold text-orange-700">₹{stats.totalRevenue.toLocaleString()}</div>
             </Card>
-            <Card className="p-4 bg-gradient-to-br from-yellow-50 to-white border-yellow-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-xs md:text-sm text-yellow-600 font-medium">Pending</div>
-                  <div className="text-xl md:text-2xl font-bold text-yellow-700 mt-1">{stats.statusCounts?.pending || 0}</div>
-                </div>
-                <div className="text-2xl md:text-3xl">⏱️</div>
-              </div>
+            <Card className="p-4 bg-linear-to-br from-yellow-50 to-white border-yellow-100 hover:shadow-md transition-shadow">
+              <div className="text-xs md:text-sm text-yellow-600 font-semibold mb-1">Pending</div>
+              <div className="text-2xl md:text-3xl font-bold text-yellow-700">{stats.statusCounts?.pending || 0}</div>
             </Card>
-            <Card className="p-4 bg-gradient-to-br from-green-50 to-white border-green-100">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-xs md:text-sm text-green-600 font-medium">Delivered</div>
-                  <div className="text-xl md:text-2xl font-bold text-green-700 mt-1">{stats.statusCounts?.delivered || 0}</div>
-                </div>
-                <div className="text-2xl md:text-3xl">✅</div>
-              </div>
+            <Card className="p-4 bg-linear-to-br from-green-50 to-white border-green-100 hover:shadow-md transition-shadow">
+              <div className="text-xs md:text-sm text-green-600 font-semibold mb-1">Delivered</div>
+              <div className="text-2xl md:text-3xl font-bold text-green-700">{stats.statusCounts?.delivered || 0}</div>
             </Card>
           </div>
         )}
 
         {/* Search Bar */}
-        <div className="mb-4">
-          <div className="relative">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <Input
-              placeholder="Search by Order ID, Name, Phone..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
+        <div className="mb-4 relative">
+          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            placeholder="Search by Order ID, Name, Phone..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[rgb(var(--orange))] focus:ring-4 focus:ring-[rgb(var(--orange))]/10 transition-all"
+          />
         </div>
 
         {/* Filter Toggle Button (Mobile) */}
@@ -266,7 +275,7 @@ export default function OrdersPage() {
             >
               <option value="">All Status</option>
               {STATUS_OPTIONS.map((status) => (
-                <option key={status.value} value={status.value}>{status.icon} {status.label}</option>
+                <option key={status.value} value={status.value}>{status.label}</option>
               ))}
             </select>
 
@@ -276,10 +285,10 @@ export default function OrdersPage() {
               onChange={(e) => setPaymentFilter(e.target.value)}
             >
               <option value="">All Payment Status</option>
-              <option value="pending">⏳ Pending</option>
-              <option value="initiated">🔄 Initiated</option>
-              <option value="completed">✓ Completed</option>
-              <option value="failed">✗ Failed</option>
+              <option value="pending">Pending</option>
+              <option value="initiated">Initiated</option>
+              <option value="completed">Completed</option>
+              <option value="failed">Failed</option>
             </select>
 
             <button onClick={fetchOrders} className="md:col-span-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium transition-colors">
@@ -334,7 +343,7 @@ export default function OrdersPage() {
                         </td>
                         <td className="px-6 py-4">
                           <Badge variant={getStatusBadgeVariant(order.status)}>
-                            {STATUS_OPTIONS.find(s => s.value === order.status)?.icon} {STATUS_OPTIONS.find(s => s.value === order.status)?.label || order.status}
+                            {STATUS_OPTIONS.find(s => s.value === order.status)?.label || order.status}
                           </Badge>
                         </td>
                         <td className="px-6 py-4">
@@ -372,7 +381,7 @@ export default function OrdersPage() {
                       <div className="text-sm text-gray-600 mt-1">{order.orderDate}</div>
                     </div>
                     <Badge variant={getStatusBadgeVariant(order.status)}>
-                      {STATUS_OPTIONS.find(s => s.value === order.status)?.icon} {STATUS_OPTIONS.find(s => s.value === order.status)?.label}
+                      {STATUS_OPTIONS.find(s => s.value === order.status)?.label}
                     </Badge>
                   </div>
 
@@ -435,7 +444,7 @@ export default function OrdersPage() {
                 {/* Customer Info */}
                 <div>
                   <div className="text-xs text-gray-500 mb-2">Customer Information</div>
-                  <Card className="p-4 bg-gradient-to-br from-gray-50 to-white">
+                  <Card className="p-4 bg-linear-to-br from-gray-50 to-white">
                     <div className="flex items-start gap-3">
                       <div className="p-2 bg-[rgb(var(--orange))]/10 rounded-full">
                         <svg className="w-5 h-5 text-[rgb(var(--orange))]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -446,7 +455,7 @@ export default function OrdersPage() {
                         <div className="font-semibold text-gray-900">{selectedOrder.customerName}</div>
                         <div className="text-sm text-gray-600 mt-1">{selectedOrder.phoneNumber}</div>
                         <div className="text-sm text-gray-600 mt-2 flex items-start gap-2">
-                          <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-4 h-4 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                           </svg>
@@ -460,7 +469,7 @@ export default function OrdersPage() {
                 {/* Items */}
                 <div>
                   <div className="text-xs text-gray-500 mb-2">Order Items ({selectedOrder.totalItems})</div>
-                  <Card className="p-4 bg-gradient-to-br from-orange-50/30 to-white">
+                  <Card className="p-4 bg-linear-to-br from-orange-50/30 to-white">
                     <div className="space-y-3">
                       {selectedOrder.items.map((item, idx) => (
                         <div key={idx} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
@@ -495,8 +504,7 @@ export default function OrdersPage() {
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                       >
-                        <span className="block text-base mb-0.5">{status.icon}</span>
-                        <span className="text-xs">{status.label.split(' ')[0]}</span>
+                        {status.label}
                       </button>
                     ))}
                   </div>
@@ -505,7 +513,7 @@ export default function OrdersPage() {
                 {/* Payment Info */}
                 <div>
                   <div className="text-xs text-gray-500 mb-2">Payment Information</div>
-                  <Card className="p-4 bg-gradient-to-br from-green-50/30 to-white">
+                  <Card className="p-4 bg-linear-to-br from-green-50/30 to-white">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm text-gray-700">Payment Status</span>
                       <Badge variant={getPaymentStatusColor(selectedOrder.paymentStatus)}>

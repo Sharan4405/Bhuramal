@@ -14,10 +14,10 @@ export function FilterButtons({ currentFilter, onFilterChange }: FilterButtonsPr
         <button
           key={filter}
           onClick={() => onFilterChange(filter)}
-          className={`px-4 py-2 rounded-lg border-none cursor-pointer font-medium shadow-sm transition-all ${
+          className={`px-6 py-2.5 rounded-lg border-none cursor-pointer font-semibold shadow-sm transition-all ${
             currentFilter === filter
-              ? 'bg-[rgb(var(--orange))] text-white'
-              : 'bg-white text-gray-700 hover:bg-gray-50'
+              ? 'bg-linear-to-r from-orange-500 to-orange-600 text-white shadow-md'
+              : 'bg-white text-gray-700 hover:text-[rgb(var(--orange))] hover:bg-orange-50'
           }`}
         >
           {filter}

@@ -50,15 +50,15 @@ export function ProductTable({ products, onEdit, onDelete }: ProductTableProps) 
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex gap-2">
-                    <button 
+                    <button
                       onClick={() => onEdit(product)}
-                      className="text-sm px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors font-medium"
+                      className="text-sm px-3 py-1.5 text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 rounded-lg transition-all font-medium shadow-sm"
                     >
                       Edit
                     </button>
-                    <button 
+                    <button
                       onClick={() => onDelete(product._id)}
-                      className="text-sm px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors font-medium"
+                      className="text-sm px-3 py-1.5 text-white bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 rounded-lg transition-all font-medium shadow-sm"
                     >
                       Delete
                     </button>

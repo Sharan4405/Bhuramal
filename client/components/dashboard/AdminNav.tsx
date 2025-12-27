@@ -13,20 +13,20 @@ export function AdminNav() {
   };
 
   const navItems = [
-    { href: '/dashboard', label: 'Conversations', icon: '💬' },
-    { href: '/dashboard/orders', label: 'Orders', icon: '📦' },
-    { href: '/dashboard/products', label: 'Products', icon: '🛍️' },
+    { href: '/dashboard', label: 'Conversations' },
+    { href: '/dashboard/orders', label: 'Orders' },
+    { href: '/dashboard/products', label: 'Products' },
   ];
 
   return (
-    <nav className="bg-white border-b border-gray-200 sticky top-0 z-40">
+    <nav className="bg-white border-b-2 border-orange-100 sticky top-0 z-40 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-16">
           {/* Logo/Brand */}
           <div className="flex items-center gap-8">
             <Link href="/dashboard" className="flex items-center gap-2">
-              <div className="text-2xl font-bold text-[rgb(var(--orange))]">Bhuramal</div>
-              <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full font-semibold">Admin</span>
+              <div className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-orange-500 bg-clip-text text-transparent">Bhuramal</div>
+              <span className="text-xs bg-gradient-to-r from-orange-500 to-orange-600 text-white px-3 py-1 rounded-full font-semibold shadow-sm">Admin</span>
             </Link>
 
             {/* Navigation Links - Desktop */}
@@ -37,13 +37,12 @@ export function AdminNav() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
                       isActive
-                        ? 'bg-orange-50 text-[rgb(var(--orange))]'
-                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                        ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md'
+                        : 'text-gray-700 hover:text-[rgb(var(--orange))] hover:bg-orange-50'
                     }`}
                   >
-                    <span className="mr-2">{item.icon}</span>
                     {item.label}
                   </Link>
                 );
@@ -55,10 +54,9 @@ export function AdminNav() {
           <div className="flex items-center gap-3">
             <button
               onClick={handleLogout}
-              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              className="px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 rounded-lg transition-all shadow-md hover:shadow-lg"
             >
-              <span className="hidden sm:inline">Logout</span>
-              <span className="sm:hidden">🚪</span>
+              Logout
             </button>
           </div>
         </div>
@@ -71,13 +69,12 @@ export function AdminNav() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all ${
                   isActive
-                    ? 'bg-orange-50 text-[rgb(var(--orange))]'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                    ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md'
+                    : 'text-gray-700 hover:text-[rgb(var(--orange))] hover:bg-orange-50'
                 }`}
               >
-                <span>{item.icon}</span>
                 {item.label}
               </Link>
             );

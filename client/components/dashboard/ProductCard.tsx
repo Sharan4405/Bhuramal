@@ -35,16 +35,16 @@ export function ProductCard({ product, onEdit, onDelete }: ProductCardProps) {
         <span className="text-xl font-bold text-[rgb(var(--orange))]">₹{product.price}</span>
       </div>
 
-      <div className="flex gap-2 pt-3 border-t border-gray-100">
-        <button 
+      <div className="flex gap-2 pt-3 border-t border-orange-100">
+        <button
           onClick={() => onEdit(product)}
-          className="flex-1 px-4 py-2 text-sm bg-blue-50 text-blue-600 rounded-lg font-medium hover:bg-blue-100 transition-colors"
+          className="flex-1 px-4 py-2 text-sm bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg font-medium hover:from-orange-600 hover:to-orange-700 transition-all shadow-sm"
         >
           Edit
         </button>
-        <button 
+        <button
           onClick={() => onDelete(product._id)}
-          className="flex-1 px-4 py-2 text-sm bg-red-50 text-red-600 rounded-lg font-medium hover:bg-red-100 transition-colors"
+          className="flex-1 px-4 py-2 text-sm bg-gradient-to-r from-red-500 to-red-600 text-white rounded-lg font-medium hover:from-red-600 hover:to-red-700 transition-all shadow-sm"
         >
           Delete
         </button>
