@@ -94,6 +94,8 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
   
+  console.log('Updating order status:', { id, status });
+  
   // Validate status
   const validStatuses = ['pending', 'confirmed', 'processing', 'shipped', 'delivery', 'delivered', 'cancelled'];
   if (!validStatuses.includes(status)) {
@@ -103,12 +105,15 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
   const order = await findOrder(id);
   
   if (!order) {
+    console.log('Order not found:', id);
     return notFoundResponse(res, 'Order');
   }
   
+  console.log('Found order:', order.orderId);
   order.status = status;
   await order.save();
   
+  console.log('Order status updated successfully');
   return successResponse(res, { data: order }, `Order status updated to ${status}`);
 });
 

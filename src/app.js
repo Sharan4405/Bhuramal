@@ -26,7 +26,11 @@ app.use('/webhook', express.json({
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cors('*'));
+app.use(cors({
+  origin: ['http://localhost:3000', 'http://localhost:3001'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
+}));
 app.use(helmet());
 app.use(rateLimiter({
   windowMs: 1 * 60 * 1000, // 1 minute

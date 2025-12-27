@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { io, Socket } from 'socket.io-client';
 import { api, auth } from '@/lib/api';
-import { ChatHeader } from '@/components/chat/ChatHeader';
+import { AdminNav } from '@/components/dashboard/AdminNav';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { MessageBubble } from '@/components/chat/MessageBubble';
 
@@ -134,30 +134,72 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="h-screen flex flex-col">
-      <ChatHeader 
-        onBack={() => router.push('/dashboard')} 
-        onResolve={handleResolve}
-        onReopen={handleReopen}
-        status={status}
-      />
+    <>
+      <AdminNav />
+      <div className="h-screen flex flex-col">
+        {/* Chat Header with Back Button and Actions */}
+        <div className="bg-white border-b border-gray-200 px-4 py-3">
+          <div className="max-w-4xl mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => router.push('/dashboard')}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                title="Back to conversations"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <div>
+                <h2 className="font-semibold text-gray-900">Conversation</h2>
+                <p className="text-sm text-gray-500">ID: {conversationId.slice(-8)}</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                status === 'OPEN' 
+                  ? 'bg-green-100 text-green-700' 
+                  : 'bg-gray-100 text-gray-700'
+              }`}>
+                {status}
+              </span>
+              {status === 'OPEN' ? (
+                <button
+                  onClick={handleResolve}
+                  className="px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors"
+                >
+                  Resolve
+                </button>
+              ) : (
+                <button
+                  onClick={handleReopen}
+                  className="px-4 py-2 text-sm bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-lg font-medium transition-colors"
+                >
+                  Reopen
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
 
-      <div className="flex-1 overflow-y-auto p-8 bg-gray-50">
-        {loading ? (
-          <div className="text-center py-8 text-gray-600">
-            Loading messages...
-          </div>
-        ) : (
-          <div className="max-w-4xl mx-auto flex flex-col gap-4">
-            {messages.map((msg) => (
-              <MessageBubble key={msg._id} message={msg} />
-            ))}
-            <div ref={messagesEndRef} />
-          </div>
-        )}
+        <div className="flex-1 overflow-y-auto p-8 bg-gray-50">
+          {loading ? (
+            <div className="text-center py-8 text-gray-600">
+              Loading messages...
+            </div>
+          ) : (
+            <div className="max-w-4xl mx-auto flex flex-col gap-4">
+              {messages.map((msg) => (
+                <MessageBubble key={msg._id} message={msg} />
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
+          )}
+        </div>
+
+        <ChatInput onSend={handleSend} disabled={sending} />
       </div>
-
-      <ChatInput onSend={handleSend} disabled={sending} />
-    </div>
+    </>
   );
 }
