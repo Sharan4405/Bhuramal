@@ -8,12 +8,13 @@ import Conversation from '../models/conversation.model.js';
 import { createPaymentLink } from '../services/paymentService.js';
 import cartService from '../services/cartService.js';
 import { notifyNewMessage } from '../services/socketService.js';
+import { calculatePrice, getPriceBreakdown } from '../utils/priceCalculator.js';
 
 // Main menu configuration
 const MAIN_MENU = {
   buttons: [
     { id: 'orders', title: '🛒 Order Now' },
-    { id: 'track_order', title: '📦 Track Order' },
+    { id: 'view_cart', title: '🛒 View Cart' },
     { id: 'support', title: '💬 Support & Queries' }
   ],
   footer: 'Type "menu" anytime to return here'
@@ -34,11 +35,15 @@ async function navigateToMenu(from, userName = null) {
 
 // 🔧 Helper to navigate to manual support (reusable)
 async function navigateToSupport(from) {
-  await conversation.setState(from, 'manual');
+  await conversation.setState(from, 'support_menu');
   await sendButtonMessage(
     from,
-    '👨‍💼 You\'re now in *manual support* mode. Our team will assist you shortly.\n\nType "menu" anytime to return to the bot.',
-    [{ id: 'view_address', title: '📍 View Address' }]
+    '💬 *Support & Queries*\n\nHow can we help you today?',
+    [
+      { id: 'track_order', title: '📦 Track Order' },
+      { id: 'view_address', title: '📍 View Address' },
+      { id: 'contact_team', title: '👨‍💼 Contact Team' }
+    ]
   );
 }
 
@@ -71,14 +76,20 @@ async function showMainMenu(from, userName = null) {
 // Helper to show order categories
 async function showOrderCategories(from) {
   const categories = await catalog.getCategories();
-  const sections = [{
-    title: "Order Categories",
-    rows: categories.map((cat, idx) => ({
-      id: `order_cat_${idx}`,
-      title: cat,
-      description: `Order from ${cat}`
-    }))
-  }];
+  const sections = [
+    {
+      title: "Order Categories",
+      rows: categories.map((cat, idx) => ({
+        id: `order_cat_${idx}`,
+        title: cat,
+        description: `Order from ${cat}`
+      }))
+    },
+    {
+      title: "Navigation",
+      rows: [{ id: 'main_menu', title: '↩️ Back to Main Menu', description: 'Return to main menu' }]
+    }
+  ];
   
   await sendListMessage(from, "🛒 *Place Your Order*\n\nSelect a category:", sections, "Select Category");
 }
@@ -239,7 +250,7 @@ async function handleIncoming(req, res) {
                 );
               }
               
-              await Message.create({
+              const savedMessage = await Message.create({
                 conversationId: conv._id,
                 user: from,
                 text,
@@ -247,14 +258,14 @@ async function handleIncoming(req, res) {
                 timestamp: new Date()
               });
 
-              // Notify dashboard in real-time
+              // Notify dashboard in real-time with actual saved message
               notifyNewMessage(conv._id.toString(), {
-                _id: Date.now().toString(),
+                _id: savedMessage._id.toString(),
                 conversationId: conv._id,
                 user: from,
                 text,
                 direction: 'IN',
-                timestamp: new Date()
+                timestamp: savedMessage.timestamp
               });
             } catch (err) {
               console.error('Error saving incoming message:', err.message);
@@ -298,14 +309,33 @@ async function handleIncoming(req, res) {
             continue;
           }
 
-          // Existing session - user types hi/hello - show menu WITHOUT welcome
-          if (/^hi$|^hello$/i.test(text)) {
-            await navigateToMenu(from); // No userName = no welcome message
+          // Support menu handler
+          if (state === 'support_menu') {
+            if (text === 'track_order') {
+              await conversation.setState(from, 'awaiting_order_id');
+              await sendMessage(from, '📦 *Track Your Order*\n\nPlease enter your Order ID to check the status.\n\nYou can find the Order ID in your payment confirmation message.\n\nType "menu" to return.');
+            } else if (text === 'view_address') {
+              await sendStoreLocation(from);
+            } else if (text === 'contact_team') {
+              await conversation.setState(from, 'manual');
+              await sendMessage(
+                from,
+                '👨‍💼 You\'re now connected with our support team. We\'ll assist you shortly.\n\nType "menu" anytime to return to the bot.'
+              );
+            } else {
+              await sendMessage(from, "Please use the buttons above.");
+            }
             continue;
           }
 
           // Manual mode: do not auto-respond (menu already handled above)
           if (state === 'manual') {
+            continue;
+          }
+
+          // Only respond to hi/hello in menu state
+          if (state === 'menu' && /^hi$|^hello$/i.test(text)) {
+            await sendMessage(from, 'Hello! 👋 Please use the options above.');
             continue;
           }
 
@@ -322,11 +352,54 @@ async function handleIncoming(req, res) {
 
           // Main menu handler
           if (state === 'menu') {
-            if (text === 'track_order' || text === '2') {
-              await conversation.setState(from, 'awaiting_order_id');
-              await sendMessage(from, '📦 *Track Your Order*\n\nPlease enter your Order ID to check the status.\n\nYou can find the Order ID in your payment confirmation message.\n\nType "menu" to return.');
+            if (text === 'view_cart') {
+              // Show cart contents
+              if (await cartService.isEmpty(from)) {
+                await sendButtonMessage(
+                  from,
+                  '🛒 Your cart is empty.\n\nStart shopping to add items!',
+                  [{ id: 'orders', title: '🛒 Start Shopping' }]
+                );
+              } else {
+                const cartSummary = await cartService.formatCartSummary(from);
+                await sendButtonMessage(
+                  from,
+                  cartSummary + '\n\nWhat would you like to do?',
+                  [
+                    { id: 'orders', title: '➕ Add More Items' },
+                    { id: 'checkout', title: '💳 Checkout' },
+                    { id: 'clear_cart', title: '🗑️ Clear Cart' }
+                  ]
+                );
+                await conversation.setState(from, 'view_cart_options');
+              }
             } else {
-              await sendMessage(from, "Please use the buttons above or type 1-3.");
+              await sendMessage(from, "Please use the buttons above.");
+            }
+            continue;
+          }
+
+          // View cart options handler
+          if (state === 'view_cart_options') {
+            if (text === 'orders') {
+              await showOrderCategories(from);
+              await conversation.setState(from, 'ordering');
+            } else if (text === 'checkout') {
+              await conversation.setState(from, 'address_input');
+              await sendMessage(
+                from,
+                `📍 *Delivery Address Required*\n\nPlease provide your complete delivery address:\n\n*Example:*\nJohn Doe\n123, MG Road\nBangalore - 560001`
+              );
+            } else if (text === 'clear_cart') {
+              await cartService.clearCart(from);
+              await sendButtonMessage(
+                from,
+                '✅ Cart cleared successfully!',
+                [{ id: 'orders', title: '🛒 Start Shopping' }]
+              );
+              await conversation.setState(from, 'menu');
+            } else {
+              await sendMessage(from, "Please use the buttons above.");
             }
             continue;
           }
@@ -394,16 +467,38 @@ async function handleIncoming(req, res) {
                 selectedItem: selectedItem,
                 selectedCategory: selectedCategory
               });
-              await sendButtonMessage(
+              
+              // Get price breakdown for display
+              const breakdown = getPriceBreakdown(selectedItem);
+              
+              // Calculate prices for each quantity option
+              const price250 = calculatePrice(selectedItem, 250);
+              const price500 = calculatePrice(selectedItem, 500);
+              const price1000 = calculatePrice(selectedItem, 1000);
+              
+              const sections = [
+                {
+                  title: "Select Quantity",
+                  rows: [
+                    { id: 'qty_250', title: '250 gm', description: `₹${price250.toFixed(2)}` },
+                    { id: 'qty_500', title: '500 gm', description: `₹${price500.toFixed(2)}` },
+                    { id: 'qty_1000', title: '1 kg', description: `₹${price1000.toFixed(2)}` }
+                  ]
+                },
+                {
+                  title: "Navigation",
+                  rows: [{ id: 'go_back_items', title: '↩️ Back to Items', description: 'Choose a different item' }]
+                }
+              ];
+              
+              await sendListMessage(
                 from,
                 `📦 *${selectedItem.name}*\n\n` +
-                `📊 ${selectedItem.weight} ${selectedItem.unit} - ₹${selectedItem.price}\n\n` +
+                `📊 Base: ${selectedItem.weight} ${selectedItem.unit} - ₹${selectedItem.price}\n` +
+                `💰 Price per kg: ₹${breakdown.pricePerKg}\n\n` +
                 `Please select the quantity you want to order:`,
-                [
-                  { id: 'qty_250', title: '250 gm' },
-                  { id: 'qty_500', title: '500 gm' },
-                  { id: 'go_back_items', title: '↩️ Go Back' }
-                ]
+                sections,
+                "Select Quantity"
               );
             } else {
               await sendMessage(from, "Invalid item. Please select from the list above.");
@@ -428,14 +523,16 @@ async function handleIncoming(req, res) {
               continue;
             }
 
-            // Parse quantity from button selection
+            // Parse quantity from list selection
             let gramsRequested = 0;
             if (text === 'qty_250') {
               gramsRequested = 250;
             } else if (text === 'qty_500') {
               gramsRequested = 500;
+            } else if (text === 'qty_1000') {
+              gramsRequested = 1000;
             } else {
-              await sendMessage(from, "Please use the buttons above to select quantity.");
+              await sendMessage(from, "Please use the dropdown list above to select a quantity option.");
               continue;
             }
 
@@ -448,10 +545,11 @@ async function handleIncoming(req, res) {
               continue;
             }
             
-            const totalPrice = parseFloat(selectedItem.price);
+            // Calculate price based on selected quantity
+            const totalPrice = calculatePrice(selectedItem, gramsRequested);
               
               // Add item to cart with calculated price
-              const cartResult = cartService.addItem(from, {
+              const cartResult = await cartService.addItem(from, {
                 name: selectedItem.name,
                 weight: gramsRequested, // Store requested grams
                 unit: 'grams',
@@ -468,15 +566,19 @@ async function handleIncoming(req, res) {
               await sendButtonMessage(
                 from,
                 `✅ Added ${gramsRequested}g of ${selectedItem.name} to cart!\n` +
-                `💰 Price: ₹${totalPrice.toFixed(2)}\n\n${cartService.formatCartSummary(from)}\n\n` +
+                `💰 Price: ₹${totalPrice.toFixed(2)}\n\n${await cartService.formatCartSummary(from)}\n\n` +
                 `What would you like to do next?`,
                 [
                   { id: 'add_more', title: '➕ Add More Items' },
-                  { id: 'checkout', title: '💳 Checkout' }
+                  { id: 'checkout', title: '💳 Checkout' },
+                  { id: 'back_to_quantity', title: '↩️ Back to Quantity' }
                 ]
               );
               
-              await conversation.setState(from, 'cart_options');
+              await conversation.setState(from, 'cart_options', {
+                selectedItem: selectedItem,
+                selectedCategory: stateData?.metadata?.selectedCategory
+              });
             continue;
           }
 
@@ -491,6 +593,52 @@ async function handleIncoming(req, res) {
                 from,
                 `📍 *Delivery Address Required*\n\nPlease provide your complete delivery address:\n\n*Example:*\nJohn Doe\n123, MG Road\nBangalore - 560001`
               );
+            } else if (text === 'back_to_quantity') {
+              // Go back to quantity selection for the same item
+              const stateData = await conversation.getState(from, true);
+              const selectedItem = stateData?.metadata?.selectedItem;
+              const selectedCategory = stateData?.metadata?.selectedCategory;
+              
+              if (selectedItem) {
+                // Show quantity selection again
+                const breakdown = getPriceBreakdown(selectedItem);
+                const price250 = calculatePrice(selectedItem, 250);
+                const price500 = calculatePrice(selectedItem, 500);
+                const price1000 = calculatePrice(selectedItem, 1000);
+                
+                const sections = [
+                  {
+                    title: "Select Quantity",
+                    rows: [
+                      { id: 'qty_250', title: '250 gm', description: `₹${price250.toFixed(2)}` },
+                      { id: 'qty_500', title: '500 gm', description: `₹${price500.toFixed(2)}` },
+                      { id: 'qty_1000', title: '1 kg', description: `₹${price1000.toFixed(2)}` }
+                    ]
+                  },
+                  {
+                    title: "Navigation",
+                    rows: [{ id: 'go_back_items', title: '↩️ Back to Items', description: 'Choose a different item' }]
+                  }
+                ];
+                
+                await sendListMessage(
+                  from,
+                  `📦 *${selectedItem.name}*\n\n` +
+                  `📊 Base: ${selectedItem.weight} ${selectedItem.unit} - ₹${selectedItem.price}\n` +
+                  `💰 Price per kg: ₹${breakdown.pricePerKg}\n\n` +
+                  `Please select the quantity you want to order:`,
+                  sections,
+                  "Select Quantity"
+                );
+                
+                await conversation.setState(from, 'quantity_input', {
+                  selectedItem: selectedItem,
+                  selectedCategory: selectedCategory
+                });
+              } else {
+                await showOrderCategories(from);
+                await conversation.setState(from, 'ordering');
+              }
             } else {
               await sendMessage(from, `❓ Unrecognized option: "${text}". Please use the buttons to proceed.`);
             }
@@ -506,7 +654,7 @@ async function handleIncoming(req, res) {
             const customerName = addressLines[0] || userName || 'Customer';
             
             // Get cart summary
-            const cartSummary = cartService.getCartSummary(from);
+            const cartSummary = await cartService.getCartSummary(from);
             
             if (cartSummary.items.length === 0) {
               await sendMessage(from, "🛒 Your cart is empty. Please add items first.");
@@ -591,7 +739,7 @@ async function handleIncoming(req, res) {
               console.error('❌ Error processing order:', error);
               
               // Clear cart and state
-              cartService.clearCart(from);
+              await cartService.clearCart(from);
               await conversation.clearState(from);
               
               // Notify user of error
