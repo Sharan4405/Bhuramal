@@ -1,19 +1,15 @@
 /**
  * Cart Service - Manages shopping cart for multiple items
- * Production-ready with validation and error handling
- * Cart persists for session duration (no separate timeout)
+ * Database-backed with MongoDB for persistence
  */
 
-class CartService {
-  constructor() {
-    // In-memory cart storage (user phone number as key)
-    this.carts = new Map();
-  }
+import Cart from '../models/Cart.js';
 
+class CartService {
   /**
    * Add item to user's cart
    */
-  addItem(userId, item) {
+  async addItem(userId, item) {
     try {
       if (!userId || !item) {
         throw new Error('Invalid userId or item');
@@ -24,14 +20,15 @@ class CartService {
         throw new Error('Item missing required fields (name, price, quantity)');
       }
 
-      // Get or create cart
-      let cart = this.carts.get(userId);
+      // Find or create cart
+      let cart = await Cart.findOne({ userId });
+      
       if (!cart) {
-        cart = {
+        cart = new Cart({
+          userId,
           items: [],
-          createdAt: Date.now(),
-          updatedAt: Date.now()
-        };
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+        });
       }
 
       // Check if item already exists in cart (for gram-based items, merge the weights)
@@ -62,8 +59,7 @@ class CartService {
         });
       }
 
-      cart.updatedAt = Date.now();
-      this.carts.set(userId, cart);
+      await cart.save();
 
       return { success: true, cart };
     } catch (error) {
@@ -75,16 +71,21 @@ class CartService {
   /**
    * Get user's cart
    */
-  getCart(userId) {
-    const cart = this.carts.get(userId);
-    return cart || { items: [], createdAt: Date.now(), updatedAt: Date.now() };
+  async getCart(userId) {
+    try {
+      const cart = await Cart.findOne({ userId });
+      return cart || { items: [], createdAt: Date.now(), updatedAt: Date.now() };
+    } catch (error) {
+      console.error('❌ Error getting cart:', error);
+      return { items: [], createdAt: Date.now(), updatedAt: Date.now() };
+    }
   }
 
   /**
    * Calculate cart totals
    */
-  getCartSummary(userId) {
-    const cart = this.getCart(userId);
+  async getCartSummary(userId) {
+    const cart = await this.getCart(userId);
     
     const totalItems = cart.items.reduce((sum, item) => sum + item.quantity, 0);
     const totalAmount = cart.items.reduce((sum, item) => sum + item.totalPrice, 0);
@@ -100,43 +101,51 @@ class CartService {
   /**
    * Clear user's cart
    */
-  clearCart(userId) {
-    this.carts.delete(userId);
+  async clearCart(userId) {
+    try {
+      await Cart.deleteOne({ userId });
+    } catch (error) {
+      console.error('❌ Error clearing cart:', error);
+    }
   }
 
   /**
    * Check if cart is empty
    */
-  isEmpty(userId) {
-    const cart = this.getCart(userId);
+  async isEmpty(userId) {
+    const cart = await this.getCart(userId);
     return cart.items.length === 0;
   }
 
   /**
    * Remove specific item from cart
    */
-  removeItem(userId, itemIndex) {
-    const cart = this.carts.get(userId);
-    if (cart && cart.items[itemIndex]) {
-      cart.items.splice(itemIndex, 1);
-      cart.updatedAt = Date.now();
-      
-      if (cart.items.length === 0) {
-        this.clearCart(userId);
-      } else {
-        this.carts.set(userId, cart);
+  async removeItem(userId, itemIndex) {
+    try {
+      const cart = await Cart.findOne({ userId });
+      if (cart && cart.items[itemIndex]) {
+        cart.items.splice(itemIndex, 1);
+        
+        if (cart.items.length === 0) {
+          await Cart.deleteOne({ userId });
+        } else {
+          await cart.save();
+        }
+        
+        return { success: true };
       }
-      
-      return { success: true };
+      return { success: false, error: 'Item not found' };
+    } catch (error) {
+      console.error('❌ Error removing item:', error);
+      return { success: false, error: error.message };
     }
-    return { success: false, error: 'Item not found' };
   }
 
   /**
    * Format cart for display
    */
-  formatCartSummary(userId) {
-    const summary = this.getCartSummary(userId);
+  async formatCartSummary(userId) {
+    const summary = await this.getCartSummary(userId);
     
     if (summary.items.length === 0) {
       return '🛒 Your cart is empty';
@@ -163,12 +172,20 @@ class CartService {
   /**
    * Get cart statistics (for monitoring)
    */
-  getStats() {
-    return {
-      activeCarts: this.carts.size,
-      totalItems: Array.from(this.carts.values())
-        .reduce((sum, cart) => sum + cart.items.length, 0)
-    };
+  async getStats() {
+    try {
+      const activeCarts = await Cart.countDocuments();
+      const carts = await Cart.find();
+      const totalItems = carts.reduce((sum, cart) => sum + cart.items.length, 0);
+      
+      return {
+        activeCarts,
+        totalItems
+      };
+    } catch (error) {
+      console.error('❌ Error getting stats:', error);
+      return { activeCarts: 0, totalItems: 0 };
+    }
   }
 }
 

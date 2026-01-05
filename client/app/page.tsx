@@ -23,7 +23,8 @@ export default function LoginPage() {
       auth.setToken(data.token);
       router.push('/dashboard');
     } catch (err) {
-      setError('Invalid credentials');
+      console.error('Login error:', err);
+      setError(err instanceof Error ? err.message : 'Invalid credentials. Please check if backend server is running.');
     } finally {
       setLoading(false);
     }

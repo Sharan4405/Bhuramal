@@ -17,7 +17,7 @@ export async function getState(senderId, includeMetadata = false) {
     const doc = await ConversationModel.findOne({ user: senderId }).lean().exec();
     if (!doc) return null;
 
-    // Check if state expired (30 min for active sessions)
+    // Check if state expired (3 hours for active sessions)
     const now = Date.now();
     const updatedAt = new Date(doc.updatedAt).getTime();
     const elapsed = now - updatedAt;
@@ -25,10 +25,10 @@ export async function getState(senderId, includeMetadata = false) {
     if (elapsed > ACTIVE_SESSION_TIMEOUT) {
       // Expired, delete it and return 'expired' marker
       await ConversationModel.deleteOne({ user: senderId }).exec();
-      return includeMetadata ? { state: null, expired: true } : null;
+      return includeMetadata ? { state: null, expired: true, metadata: {} } : null;
     }
 
-    return includeMetadata ? doc : doc.state;
+    return includeMetadata ? { state: doc.state, metadata: doc.metadata || {}, expired: false } : doc.state;
   }
 
   // In-memory fallback with timeout check
@@ -38,10 +38,10 @@ export async function getState(senderId, includeMetadata = false) {
   const elapsed = Date.now() - entry.timestamp;
   if (elapsed > ACTIVE_SESSION_TIMEOUT) {
     mem.delete(senderId);
-    return includeMetadata ? { state: null, expired: true } : null;
+    return includeMetadata ? { state: null, expired: true, metadata: {} } : null;
   }
 
-  return includeMetadata ? entry : entry.state;
+  return includeMetadata ? { state: entry.state, metadata: entry.metadata || {}, expired: false } : entry.state;
 }
 
 export async function setState(senderId, value, metadata = {}) {
@@ -58,9 +58,10 @@ export async function setState(senderId, value, metadata = {}) {
     return;
   }
   
-  // In-memory store with timestamp
+  // In-memory store with timestamp and metadata
   mem.set(senderId, {
     state: value,
+    metadata,
     timestamp: Date.now()
   });
 }
