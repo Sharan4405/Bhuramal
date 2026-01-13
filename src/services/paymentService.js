@@ -35,8 +35,7 @@ export async function createPaymentLink(orderData) {
         whatsapp: true
       },
       reminder_enable: true,
-      callback_url: `${process.env.APP_URL}/payment/callback`,
-      callback_method: 'get',
+      // No callback_url - webhook will handle everything
       notes: {
         order_id: orderId
       }
