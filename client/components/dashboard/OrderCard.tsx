@@ -2,8 +2,8 @@ import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 
 const STATUS_OPTIONS = [
-  { value: 'pending', label: 'Pending', color: 'gray', icon: '⏱️' },
-  { value: 'confirmed', label: 'Confirmed', color: 'blue', icon: '✓' },
+  { value: 'pending', label: 'Payment Pending', color: 'gray', icon: '⏱️' },
+  { value: 'confirmed', label: 'Order Placed', color: 'blue', icon: '✓' },
   { value: 'processing', label: 'Processing', color: 'yellow', icon: '⚙️' },
   { value: 'shipped', label: 'Shipped', color: 'purple', icon: '📦' },
   { value: 'delivery', label: 'Out for Delivery', color: 'indigo', icon: '🚚' },

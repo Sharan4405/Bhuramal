@@ -25,7 +25,7 @@ export function AdminNav() {
           {/* Logo/Brand */}
           <div className="flex items-center gap-8">
             <Link href="/dashboard" className="flex items-center gap-2">
-              <div className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-orange-500 bg-clip-text text-transparent">Bhuramal</div>
+              <div className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-orange-500 bg-clip-text text-transparent">Bhuramal Bhagirath</div>
               <span className="text-xs bg-gradient-to-r from-orange-500 to-orange-600 text-white px-3 py-1 rounded-full font-semibold shadow-sm">Admin</span>
             </Link>
 

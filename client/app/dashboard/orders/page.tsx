@@ -48,8 +48,8 @@ interface Stats {
 }
 
 const STATUS_OPTIONS = [
-  { value: 'pending', label: 'Pending', color: 'gray' },
-  { value: 'confirmed', label: 'Confirmed', color: 'blue' },
+  { value: 'pending', label: 'Payment Pending', color: 'gray' },
+  { value: 'confirmed', label: 'Order Placed', color: 'blue' },
   { value: 'processing', label: 'Processing', color: 'yellow' },
   { value: 'shipped', label: 'Shipped', color: 'purple' },
   { value: 'delivery', label: 'Out for Delivery', color: 'indigo' },

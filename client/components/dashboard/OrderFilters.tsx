@@ -2,8 +2,8 @@ import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 
 const STATUS_OPTIONS = [
-  { value: 'pending', label: 'Pending', icon: '⏱️' },
-  { value: 'confirmed', label: 'Confirmed', icon: '✓' },
+  { value: 'pending', label: 'Payment Pending', icon: '⏱️' },
+  { value: 'confirmed', label: 'Order Placed', icon: '✓' },
   { value: 'processing', label: 'Processing', icon: '⚙️' },
   { value: 'shipped', label: 'Shipped', icon: '📦' },
   { value: 'delivery', label: 'Out for Delivery', icon: '🚚' },
