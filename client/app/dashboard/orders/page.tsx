@@ -1,9 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { AdminNav } from '@/components/dashboard/AdminNav';
 
@@ -67,12 +65,7 @@ export default function OrdersPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
-  useEffect(() => {
-    fetchOrders();
-    fetchStats();
-  }, [searchTerm, statusFilter, paymentFilter]);
-
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('token');
@@ -97,7 +90,12 @@ export default function OrdersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchTerm, statusFilter, paymentFilter]);
+
+  useEffect(() => {
+    fetchOrders();
+    fetchStats();
+  }, [fetchOrders]);
 
   const fetchStats = async () => {
     try {

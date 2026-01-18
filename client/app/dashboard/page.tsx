@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, auth } from '@/lib/api';                                        
 import { AdminNav } from '@/components/dashboard/AdminNav';
@@ -21,6 +21,24 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
+  const loadConversations = useCallback(async (token: string) => {
+    try {
+      const data = await api.getConversations(token);
+      setConversations(data.conversations);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      console.error('Failed to fetch conversations:', err);
+      console.error('Error details:', errorMessage);
+      // Only redirect to login if it's an auth error (401)
+      if (errorMessage?.includes('401') || errorMessage?.includes('Unauthorized')) {
+        auth.removeToken();
+        router.push('/');
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [router]);
+
   useEffect(() => {
     const token = auth.getToken();
     if (!token) {
@@ -28,24 +46,7 @@ export default function DashboardPage() {
       return;
     }
     loadConversations(token);
-  }, [router]);
-
-  const loadConversations = async (token: string) => {
-    try {
-      const data = await api.getConversations(token);
-      setConversations(data.conversations);
-    } catch (err: any) {
-      console.error('Failed to fetch conversations:', err);
-      console.error('Error details:', err.message);
-      // Only redirect to login if it's an auth error (401)
-      if (err.message?.includes('401') || err.message?.includes('Unauthorized')) {
-        auth.removeToken();
-        router.push('/');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [router, loadConversations]);
 
   return (
     <>

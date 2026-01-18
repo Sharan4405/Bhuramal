@@ -1,9 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
+import { useState, useEffect, useCallback } from 'react';
 import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { AdminNav } from '@/components/dashboard/AdminNav';
@@ -38,12 +36,7 @@ export default function ProductsPage() {
     inStock: true
   });
 
-  useEffect(() => {
-    fetchProducts();
-    fetchCategories();
-  }, [searchTerm, selectedCategory, stockFilter]);
-
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
       const params = new URLSearchParams();
@@ -61,7 +54,12 @@ export default function ProductsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchTerm, selectedCategory, stockFilter]);
+
+  useEffect(() => {
+    fetchProducts();
+    fetchCategories();
+  }, [fetchProducts]);
 
   const fetchCategories = async () => {
     try {

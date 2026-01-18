@@ -15,7 +15,7 @@ interface ProductFormModalProps {
   categories: string[];
   onSubmit: (e: React.FormEvent) => void;
   onCancel: () => void;
-  onChange: (field: string, value: any) => void;
+  onChange: (field: string, value: string | boolean) => void;
 }
 
 export function ProductFormModal({

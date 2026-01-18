@@ -13,8 +13,31 @@ const STATUS_OPTIONS = [
 
 type BadgeVariant = 'gray' | 'blue' | 'yellow' | 'purple' | 'indigo' | 'success' | 'error' | 'warning';
 
+interface OrderItem {
+  name: string;
+  weight: string;
+  unit: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice: number;
+}
+
+interface Order {
+  orderId: string;
+  orderDate: string;
+  totalAmount: number;
+  customerName: string;
+  phoneNumber: string;
+  fullAddress: string;
+  totalItems: number;
+  items: OrderItem[];
+  status: string;
+  paymentStatus: string;
+  razorpayPaymentId?: string;
+}
+
 interface OrderDetailsModalProps {
-  order: any;
+  order: Order | null;
   onClose: () => void;
   onUpdateStatus: (orderId: string, status: string) => void;
   getPaymentStatusColor: (status: string) => BadgeVariant | undefined;
@@ -84,7 +107,7 @@ export function OrderDetailsModal({ order, onClose, onUpdateStatus, getPaymentSt
             <div className="text-xs text-gray-500 mb-2">Order Items ({order.totalItems})</div>
             <Card className="p-4 bg-gradient-to-br from-orange-50/30 to-white">
               <div className="space-y-3">
-                {order.items.map((item: any, idx: number) => (
+                {order.items.map((item, idx) => (
                   <div key={idx} className="flex justify-between items-center py-2 border-b border-gray-100 last:border-b-0">
                     <div className="flex-1">
                       <div className="font-medium text-gray-900">{item.name}</div>

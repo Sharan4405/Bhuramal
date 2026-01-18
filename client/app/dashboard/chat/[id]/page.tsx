@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import { io, Socket } from 'socket.io-client';
 import { api, auth } from '@/lib/api';
@@ -25,6 +25,32 @@ export default function ChatPage() {
   const router = useRouter();
   const params = useParams();
   const conversationId = params.id as string;
+
+  const loadConversation = useCallback(async (token: string) => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/conversations?status=`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      const conv = data.conversations.find((c: { _id: string; status: 'OPEN' | 'RESOLVED' }) => c._id === conversationId);
+      if (conv) {
+        setStatus(conv.status);
+      }
+    } catch (err) {
+      console.error('Failed to load conversation:', err);
+    }
+  }, [conversationId]);
+
+  const loadMessages = useCallback(async (token: string) => {
+    try {
+      const data = await api.getMessages(token, conversationId);
+      setMessages(data.messages);
+    } catch {
+      console.error('Failed to load messages');
+    } finally {
+      setLoading(false);
+    }
+  }, [conversationId]);
 
   useEffect(() => {
     const token = auth.getToken();
@@ -62,37 +88,11 @@ export default function ChatPage() {
         socketRef.current.disconnect();
       }
     };
-  }, [conversationId, router]); // Added filter dependency
+  }, [conversationId, router, loadConversation, loadMessages]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-
-  const loadConversation = async (token: string) => {
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/conversations?status=`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      const conv = data.conversations.find((c: any) => c._id === conversationId);
-      if (conv) {
-        setStatus(conv.status);
-      }
-    } catch (err) {
-      console.error('Failed to load conversation:', err);
-    }
-  };
-
-  const loadMessages = async (token: string) => {
-    try {
-      const data = await api.getMessages(token, conversationId);
-      setMessages(data.messages);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSend = async (message: string) => {
     const token = auth.getToken();
@@ -102,7 +102,7 @@ export default function ChatPage() {
     try {
       await api.sendMessage(token, conversationId, message);
       // No need to reload - WebSocket will notify us
-    } catch (err) {
+    } catch {
       alert('Failed to send message');
     } finally {
       setSending(false);
@@ -116,7 +116,7 @@ export default function ChatPage() {
     try {
       await api.resolveConversation(token, conversationId);
       setStatus('RESOLVED');
-    } catch (err) {
+    } catch {
       alert('Failed to resolve conversation');
     }
   };
@@ -128,7 +128,7 @@ export default function ChatPage() {
     try {
       await api.reopenConversation(token, conversationId);
       setStatus('OPEN');
-    } catch (err) {
+    } catch {
       alert('Failed to reopen conversation');
     }
   };

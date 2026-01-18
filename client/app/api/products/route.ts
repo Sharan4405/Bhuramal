@@ -20,11 +20,12 @@ export async function GET(request: NextRequest) {
     const data = await response.json();
     console.log('Products response:', { status: response.status, success: data.success });
     return NextResponse.json(data, { status: response.status });
-  } catch (error: any) {
-    console.error('Error fetching products:', error.message);
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error fetching products:', errorMessage);
     console.error('API_URL:', API_URL);
     return NextResponse.json(
-      { success: false, message: `Failed to fetch products: ${error.message}` },
+      { success: false, message: `Failed to fetch products: ${errorMessage}` },
       { status: 500 }
     );
   }
