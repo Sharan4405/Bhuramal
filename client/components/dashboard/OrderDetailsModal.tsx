@@ -23,6 +23,7 @@ interface OrderItem {
 }
 
 interface Order {
+  _id: string;
   orderId: string;
   orderDate: string;
   totalAmount: number;
