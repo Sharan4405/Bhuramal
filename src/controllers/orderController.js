@@ -187,6 +187,10 @@ export const getOrderStats = asyncHandler(async (req, res) => {
   
   const query = dateFilter.$gte || dateFilter.$lte ? { orderDate: dateFilter } : {};
   
+  // Build revenue query - only count completed payments
+  const revenueQuery = { ...query };
+  revenueQuery.paymentStatus = 'completed';
+  
   const [
     totalOrders,
     statusCounts,
@@ -203,7 +207,7 @@ export const getOrderStats = asyncHandler(async (req, res) => {
       { $group: { _id: '$paymentStatus', count: { $sum: 1 } } }
     ]),
     Order.aggregate([
-      { $match: { ...query, paymentStatus: 'completed' } },
+      { $match: revenueQuery },
       { $group: { _id: null, total: { $sum: '$totalAmount' } } }
     ])
   ]);

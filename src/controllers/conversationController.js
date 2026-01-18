@@ -1,5 +1,6 @@
 import Conversation from '../models/conversation.model.js';
 import Message from '../models/Message.js';
+import { markMessageAsRead } from '../utils/whatsapp.js';
 
 /**
  * Get all conversations (paginated)
@@ -44,6 +45,18 @@ export async function getMessages(req, res) {
       .sort({ createdAt: -1 })
       .limit(limit)
       .lean();
+    
+    // Mark all incoming messages as read so customer sees blue ticks
+    const unreadIncomingMessages = messages.filter(
+      msg => msg.direction === 'IN' && msg.whatsappMessageId
+    );
+    
+    // Mark messages as read in background (don't await)
+    unreadIncomingMessages.forEach(msg => {
+      markMessageAsRead(msg.whatsappMessageId).catch(err => {
+        console.error(`Failed to mark message ${msg.whatsappMessageId} as read:`, err.message);
+      });
+    });
     
     res.json({ messages: messages.reverse() });
   } catch (error) {

@@ -14,16 +14,17 @@ interface Conversation {
 interface ConversationCardProps {
   conversation: Conversation;
   onClick: () => void;
+  showStatus?: boolean; // Whether to show status badge
 }
 
-export function ConversationCard({ conversation, onClick }: ConversationCardProps) {
+export function ConversationCard({ conversation, onClick, showStatus = false }: ConversationCardProps) {
   return (
     <Card hover onClick={onClick}>
       <div className="flex justify-between items-start">
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-2">
             <h3 className="text-lg font-semibold text-gray-900">{conversation.user}</h3>
-            <Badge status={conversation.status} />
+            {showStatus && <Badge status={conversation.status} />}
           </div>
           <p className="text-gray-600 text-sm mb-3 line-clamp-2">
             {conversation.lastMessage || 'No messages yet'}

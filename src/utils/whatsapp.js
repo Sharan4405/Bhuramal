@@ -37,6 +37,28 @@ async function makeWhatsAppRequest(body, functionName) {
   }
 }
 
+// Mark message as read (sends blue tick to customer)
+export async function markMessageAsRead(messageId) {
+  if (!checkCredentials()) {
+    return;
+  }
+
+  const body = {
+    messaging_product: 'whatsapp',
+    status: 'read',
+    message_id: messageId
+  };
+
+  try {
+    const res = await axios.post(API_URL, body, { headers: API_HEADERS });
+    console.log(`✓ Message ${messageId} marked as read (customer will see blue tick)`);
+    return res.data;
+  } catch (err) {
+    console.error('Error marking message as read:', err?.response?.data || err.message);
+    throw err;
+  }
+}
+
 // Helper function to add header and footer to interactive messages
 function addHeaderFooter(interactive, headerText, footerText) {
   if (headerText) {
@@ -101,7 +123,7 @@ function getMessageTitle(text) {
 }
 
 // 💾 Helper to save outgoing message
-async function saveOutgoingMessage(to, text, isManualMode = false) {
+async function saveOutgoingMessage(to, text, isManualMode = false, whatsappMessageId = null) {
   try {
     // Find or create conversation
     let conversation = await Conversation.findOne({ user: to });
@@ -111,6 +133,7 @@ async function saveOutgoingMessage(to, text, isManualMode = false) {
     if (!conversation) {
       conversation = await Conversation.create({
         user: to,
+        status: 'RESOLVED', // Start as resolved
         lastMessageAt: new Date(),
         lastMessage: displayText
       });
@@ -120,33 +143,39 @@ async function saveOutgoingMessage(to, text, isManualMode = false) {
       await conversation.save();
     }
     
-    // Only save message if in manual mode
-    if (isManualMode) {
-      const savedMessage = await Message.create({
-        conversationId: conversation._id,
-        user: to,
-        text,
-        isManualMode: true,
-        direction: 'OUT',
-        timestamp: new Date()
-      });
+    // Save ALL outgoing messages to display in dashboard
+    const savedMessage = await Message.create({
+      conversationId: conversation._id,
+      user: to,
+      text,
+      messageTitle: isManualMode ? null : messageTitle,
+      isManualMode,
+      direction: 'OUT',
+      timestamp: new Date(),
+      whatsappMessageId, // Store WhatsApp message ID for status tracking
+      status: 'sending' // Initial status
+    });
 
-      // Notify dashboard in real-time
-      notifyNewMessage(conversation._id.toString(), {
-        _id: savedMessage._id.toString(),
-        conversationId: conversation._id,
-        user: to,
-        text,
-        direction: 'OUT',
-        timestamp: savedMessage.timestamp
-      });
-    }
+    // Notify dashboard in real-time
+    notifyNewMessage(conversation._id.toString(), {
+      _id: savedMessage._id.toString(),
+      conversationId: conversation._id,
+      user: to,
+      text,
+      messageTitle: savedMessage.messageTitle,
+      direction: 'OUT',
+      timestamp: savedMessage.timestamp,
+      status: 'sending'
+    });
+    
+    return savedMessage; // Return the saved message
   } catch (err) {
     console.error('Error saving outgoing message:', err.message);
+    return null;
   }
 }
 
-export async function sendMessage(to, text) {
+export async function sendMessage(to, text, saveToDb = true) {
   if (!checkCredentials()) {
     return;
   }
@@ -157,7 +186,16 @@ export async function sendMessage(to, text) {
     text: { body: text }
   };
 
-  return await makeWhatsAppRequest(body, 'sendMessage');
+  const result = await makeWhatsAppRequest(body, 'sendMessage');
+  
+  // Only save to DB if explicitly requested (for automated bot messages)
+  // Manual admin messages are saved by messageController before calling this
+  if (result && saveToDb) {
+    const whatsappMessageId = result.messages?.[0]?.id;
+    await saveOutgoingMessage(to, text, false, whatsappMessageId); // Save as automated message
+  }
+  
+  return result;
 }
 
 // Send interactive button message (up to 3 buttons)
@@ -183,7 +221,8 @@ export async function sendButtonMessage(to, bodyText, buttons, headerText = null
   const result = await makeWhatsAppRequest(buildInteractiveBody(to, interactive), 'sendButtonMessage');
   
   if (result) {
-    await saveOutgoingMessage(to, bodyText);
+    const whatsappMessageId = result.messages?.[0]?.id;
+    await saveOutgoingMessage(to, bodyText, false, whatsappMessageId); // Save as automated message
   }
   
   return result;
@@ -214,7 +253,8 @@ export async function sendListMessage(to, bodyText, sections, buttonText = "View
   const result = await makeWhatsAppRequest(buildInteractiveBody(to, interactive), 'sendListMessage');
   
   if (result) {
-    await saveOutgoingMessage(to, bodyText);
+    const whatsappMessageId = result.messages?.[0]?.id;
+    await saveOutgoingMessage(to, bodyText, false, whatsappMessageId); // Save as automated message
   }
   
   return result;
@@ -241,7 +281,8 @@ export async function sendUrlButton(to, bodyText, buttonText, url, headerText = 
   const result = await makeWhatsAppRequest(buildInteractiveBody(to, interactive), 'sendUrlButton');
   
   if (result) {
-    await saveOutgoingMessage(to, bodyText);
+    const whatsappMessageId = result.messages?.[0]?.id;
+    await saveOutgoingMessage(to, bodyText, false, whatsappMessageId); // Save as automated message
   }
   
   return result;

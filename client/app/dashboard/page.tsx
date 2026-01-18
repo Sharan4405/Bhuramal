@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, auth } from '@/lib/api';                                        
 import { AdminNav } from '@/components/dashboard/AdminNav';
-import { FilterButtons } from '@/components/dashboard/FilterButtons';
 import { ConversationCard } from '@/components/dashboard/ConversationCard';
 
 interface Conversation {
@@ -14,11 +13,11 @@ interface Conversation {
   lastMessage: string;
   lastMessageAt: string;
   currentFlow: string;
+  state?: string; // 'manual' or other states
 }
 
 export default function DashboardPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [filter, setFilter] = useState<'ALL' | 'OPEN' | 'RESOLVED'>('OPEN');
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
@@ -29,12 +28,11 @@ export default function DashboardPage() {
       return;
     }
     loadConversations(token);
-  }, [filter, router]);
+  }, [router]);
 
   const loadConversations = async (token: string) => {
     try {
-      const status = filter === 'ALL' ? undefined : filter;
-      const data = await api.getConversations(token, status);
+      const data = await api.getConversations(token);
       setConversations(data.conversations);
     } catch (err: any) {
       console.error('Failed to fetch conversations:', err);
@@ -55,11 +53,9 @@ export default function DashboardPage() {
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
           <div className="mb-8">
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">Conversations</h1>
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">All Conversations</h1>
             <p className="text-base text-gray-600">Manage customer conversations and chats in real-time</p>
           </div>
-
-          <FilterButtons currentFilter={filter} onFilterChange={setFilter} />
 
           {loading ? (
             <div className="flex justify-center items-center py-20">
@@ -80,6 +76,7 @@ export default function DashboardPage() {
                   key={conv._id}
                   conversation={conv}
                   onClick={() => router.push(`/dashboard/chat/${conv._id}`)}
+                  showStatus={conv.status === 'OPEN'}
                 />
               ))}
             </div>

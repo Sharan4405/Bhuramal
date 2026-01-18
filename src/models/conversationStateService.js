@@ -1,9 +1,11 @@
 import mongoose from 'mongoose';
 import ConversationModel from './conversation.model.js';
+import Message from './Message.js';
 
 // Configuration - exported for consistency
-export const ACTIVE_SESSION_TIMEOUT = 3 * 60 * 60 * 1000; // 3 hours (180 minutes)
+export const ACTIVE_SESSION_TIMEOUT = 6 * 60 * 60 * 1000; // 6 hours (360 minutes)
 export const DATABASE_CLEANUP_DAYS = 30; // Delete after 30 days
+export const MESSAGE_CLEANUP_DAYS = 30; // Delete messages after 30 days
 export const CLEANUP_INTERVAL = 5 * 24 * 60 * 60 * 1000; // Run cleanup every 5 days
 
 const mem = new Map();
@@ -79,13 +81,24 @@ export async function cleanupOldStates() {
   if (!usingDb()) return;
 
   const cutoffDate = new Date(Date.now() - (DATABASE_CLEANUP_DAYS * 24 * 60 * 60 * 1000));
+  const messageCutoffDate = new Date(Date.now() - (MESSAGE_CLEANUP_DAYS * 24 * 60 * 60 * 1000));
   
   try {
-    await ConversationModel.deleteMany({
+    // Cleanup old conversation states
+    const statesDeleted = await ConversationModel.deleteMany({
       updatedAt: { $lt: cutoffDate }
     }).exec();
+    
+    // Cleanup old messages
+    const messagesDeleted = await Message.deleteMany({
+      createdAt: { $lt: messageCutoffDate }
+    }).exec();
+    
+    if (statesDeleted.deletedCount > 0 || messagesDeleted.deletedCount > 0) {
+      console.log(`🧹 Cleanup complete: ${statesDeleted.deletedCount} states, ${messagesDeleted.deletedCount} messages deleted`);
+    }
   } catch (error) {
-    console.error('Error cleaning up old states:', error);
+    console.error('Error cleaning up old data:', error);
   }
 }
 

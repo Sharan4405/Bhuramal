@@ -188,6 +188,38 @@ async function handleIncoming(req, res) {
       const changes = entry.changes || [];
       for (const change of changes) {
         const value = change.value || {};
+        
+        // Handle message status updates (sent, delivered, read)
+        const statuses = (value.statuses && Array.isArray(value.statuses)) ? value.statuses : [];
+        for (const statusUpdate of statuses) {
+          const { id: whatsappMessageId, status, timestamp } = statusUpdate;
+          
+          try {
+            // Update message status in database
+            const message = await Message.findOneAndUpdate(
+              { whatsappMessageId },
+              { 
+                status,
+                updatedAt: new Date(parseInt(timestamp) * 1000)
+              },
+              { new: true }
+            );
+            
+            if (message) {
+              console.log(`✅ Message ${whatsappMessageId} status updated to: ${status}`);
+              
+              // Notify dashboard in real-time
+              notifyNewMessage(message.conversationId.toString(), {
+                _id: message._id.toString(),
+                status,
+                type: 'status_update'
+              });
+            }
+          } catch (err) {
+            console.error('Error updating message status:', err.message);
+          }
+        }
+        
         const messages = (value.messages && Array.isArray(value.messages)) ? value.messages : [];
 
         for (const message of messages) {
@@ -210,15 +242,19 @@ async function handleIncoming(req, res) {
 
           // Handle different message types
           let text = '';
+          let displayText = ''; // Human-readable text for saving to dashboard
 
           if (message.text && message.text.body) {
             text = message.text.body.trim();
+            displayText = text;
           } else if (message.interactive) {
             // Handle button/list responses
             if (message.interactive.button_reply) {
               text = message.interactive.button_reply.id; // Use button ID as text
+              displayText = message.interactive.button_reply.title || text; // Save button title
             } else if (message.interactive.list_reply) {
               text = message.interactive.list_reply.id; // Use list item ID as text
+              displayText = message.interactive.list_reply.title || text; // Save list item title
             }
           }
 
@@ -234,8 +270,9 @@ async function handleIncoming(req, res) {
               if (!conv) {
                 conv = await Conversation.create({
                   user: from,
+                  status: 'RESOLVED', // Start as resolved, only set OPEN when user requests support
                   lastMessageAt: new Date(),
-                  lastMessage: text
+                  lastMessage: displayText
                 });
               } else {
                 // Only update message fields, preserve state
@@ -244,18 +281,24 @@ async function handleIncoming(req, res) {
                   { 
                     $set: { 
                       lastMessageAt: new Date(),
-                      lastMessage: text 
+                      lastMessage: displayText 
                     }
                   }
                 );
               }
               
+              // Check if user is in manual mode
+              const currentState = await conversation.getState(from);
+              const isManual = currentState === 'manual';
+              
               const savedMessage = await Message.create({
                 conversationId: conv._id,
                 user: from,
-                text,
+                text: displayText, // Save human-readable text
+                isManualMode: isManual,
                 direction: 'IN',
-                timestamp: new Date()
+                timestamp: new Date(),
+                whatsappMessageId: messageId // Store WhatsApp message ID
               });
 
               // Notify dashboard in real-time with actual saved message
@@ -263,7 +306,7 @@ async function handleIncoming(req, res) {
                 _id: savedMessage._id.toString(),
                 conversationId: conv._id,
                 user: from,
-                text,
+                text: displayText, // Show human-readable text in dashboard
                 direction: 'IN',
                 timestamp: savedMessage.timestamp
               });
@@ -318,6 +361,13 @@ async function handleIncoming(req, res) {
               await sendStoreLocation(from);
             } else if (text === 'contact_team') {
               await conversation.setState(from, 'manual');
+              
+              // Auto-set conversation status to OPEN for support tracking
+              await Conversation.updateOne(
+                { user: from },
+                { $set: { status: 'OPEN' } }
+              );
+              
               await sendMessage(
                 from,
                 '👨‍💼 You\'re now connected with our support team. We\'ll assist you shortly.\n\nType "menu" anytime to return to the bot.'

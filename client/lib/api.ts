@@ -59,7 +59,7 @@ export const api = {
   },
 
   // Messages
-  getMessages: async (token: string, conversationId: string) => {
+  async getMessages(token: string, conversationId: string) {
     const res = await fetch(`${API_URL}/api/conversations/${conversationId}/messages`, {
       headers: { Authorization: `Bearer ${token}` },
     });

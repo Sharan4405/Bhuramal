@@ -62,7 +62,7 @@ export default function ChatPage() {
         socketRef.current.disconnect();
       }
     };
-  }, [conversationId, router]);
+  }, [conversationId, router]); // Added filter dependency
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -138,7 +138,7 @@ export default function ChatPage() {
       <AdminNav />
       <div className="h-screen flex flex-col">
         {/* Chat Header with Back Button and Actions */}
-        <div className="bg-white border-b border-gray-200 px-4 py-3">
+        <div className="bg-white border-b border-gray-200 px-4 py-3 sticky top-16 z-30 shadow-sm">
           <div className="max-w-4xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-3">
               <button

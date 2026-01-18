@@ -11,7 +11,7 @@ const ConversationSchema = new mongoose.Schema({
   status: { 
     type: String, 
     enum: ['OPEN', 'RESOLVED'],
-    default: 'OPEN'
+    default: 'RESOLVED' // Default to RESOLVED, only set OPEN when user requests support
   },
   
   lastMessageAt: { 
