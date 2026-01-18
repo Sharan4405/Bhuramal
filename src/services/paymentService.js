@@ -21,9 +21,9 @@ export async function createPaymentLink(orderData) {
   try {
     const { orderId, amount, customerName, customerPhone, description } = orderData;
     
-    // Create payment link
+    // Create payment link - webhook will handle payment confirmation
     const paymentLink = await razorpay.paymentLink.create({
-      amount: Math.round(amount * 100), // Convert to paise (smallest currency unit)
+      amount: Math.round(amount * 100),
       currency: 'INR',
       description: description || `Order Payment - ${orderId}`,
       customer: {
@@ -31,11 +31,9 @@ export async function createPaymentLink(orderData) {
         contact: customerPhone
       },
       notify: {
-        sms: true,
-        whatsapp: true
+        sms: false,      // Disabled - we send our own WhatsApp message
+        whatsapp: false  // Disabled - we send our own WhatsApp message
       },
-      reminder_enable: true,
-      // No callback_url - webhook will handle everything
       notes: {
         order_id: orderId
       }

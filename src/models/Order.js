@@ -59,7 +59,7 @@ orderSchema.index({ status: 1 });
 
 // Static method to generate short Order ID
 orderSchema.statics.generateOrderId = async function() {
-  // Format: BBP-YYMMDD-XXXXX (e.g., BBP-251218-00001)
+  // Format: YYMMDD-XXXXX (e.g., 251218-00001)
   const now = new Date();
   const istOffset = 5.5 * 60 * 60 * 1000;
   const istDate = new Date(now.getTime() + istOffset);
@@ -76,7 +76,7 @@ orderSchema.statics.generateOrderId = async function() {
   });
   
   const sequence = String(todayOrdersCount + 1).padStart(5, '0');
-  return `BBP-${dateStr}-${sequence}`;
+  return `${dateStr}-${sequence}`;
 };
 
 // Middleware to ensure updatedAt is always updated on findOneAndUpdate, updateOne, etc.

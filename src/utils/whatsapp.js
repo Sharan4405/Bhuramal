@@ -58,41 +58,89 @@ function buildInteractiveBody(to, interactive) {
   };
 }
 
+// Helper to generate message title from text
+function getMessageTitle(text) {
+  const lowerText = text.toLowerCase();
+  
+  // Payment related
+  if (lowerText.includes('payment successful')) return 'Payment Confirmation';
+  if (lowerText.includes('payment required') || lowerText.includes('proceed to payment')) return 'Payment Request';
+  if (lowerText.includes('payment failed')) return 'Payment Failed';
+  
+  // Order related
+  if (lowerText.includes('order summary')) return 'Order Summary';
+  if (lowerText.includes('order status')) return 'Order Status';
+  if (lowerText.includes('track order')) return 'Order Tracking';
+  
+  // Address and delivery
+  if (lowerText.includes('delivery address')) return 'Address Input';
+  if (lowerText.includes('store address') || lowerText.includes('location')) return 'Store Location';
+  
+  // Cart
+  if (lowerText.includes('cart')) return 'Cart Information';
+  if (lowerText.includes('added') && lowerText.includes('to cart')) return 'Item Added';
+  
+  // Menu and navigation
+  if (lowerText.includes('main menu') || lowerText.includes('what can i help')) return 'Main Menu';
+  if (lowerText.includes('select a category') || lowerText.includes('place your order')) return 'Category Selection';
+  if (lowerText.includes('select an item')) return 'Item Selection';
+  if (lowerText.includes('select quantity')) return 'Quantity Selection';
+  
+  // Support
+  if (lowerText.includes('support') && lowerText.includes('queries')) return 'Support Menu';
+  if (lowerText.includes('connected with our support')) return 'Manual Support';
+  
+  // Welcome
+  if (lowerText.includes('welcome to')) return 'Welcome Message';
+  
+  // Errors
+  if (lowerText.includes('error')) return 'Error Message';
+  if (lowerText.includes('session expired')) return 'Session Expired';
+  
+  return 'Bot Message'; // Default
+}
+
 // 💾 Helper to save outgoing message
-async function saveOutgoingMessage(to, text) {
+async function saveOutgoingMessage(to, text, isManualMode = false) {
   try {
     // Find or create conversation
     let conversation = await Conversation.findOne({ user: to });
+    const messageTitle = isManualMode ? null : getMessageTitle(text);
+    const displayText = isManualMode ? text : messageTitle;
+    
     if (!conversation) {
       conversation = await Conversation.create({
         user: to,
         lastMessageAt: new Date(),
-        lastMessage: text
+        lastMessage: displayText
       });
     } else {
       conversation.lastMessageAt = new Date();
-      conversation.lastMessage = text;
+      conversation.lastMessage = displayText;
       await conversation.save();
     }
     
-    // Save message with conversationId
-    const savedMessage = await Message.create({
-      conversationId: conversation._id,
-      user: to,
-      text,
-      direction: 'OUT',
-      timestamp: new Date()
-    });
+    // Only save message if in manual mode
+    if (isManualMode) {
+      const savedMessage = await Message.create({
+        conversationId: conversation._id,
+        user: to,
+        text,
+        isManualMode: true,
+        direction: 'OUT',
+        timestamp: new Date()
+      });
 
-    // Notify dashboard in real-time
-    notifyNewMessage(conversation._id.toString(), {
-      _id: savedMessage._id.toString(),
-      conversationId: conversation._id,
-      user: to,
-      text,
-      direction: 'OUT',
-      timestamp: savedMessage.timestamp
-    });
+      // Notify dashboard in real-time
+      notifyNewMessage(conversation._id.toString(), {
+        _id: savedMessage._id.toString(),
+        conversationId: conversation._id,
+        user: to,
+        text,
+        direction: 'OUT',
+        timestamp: savedMessage.timestamp
+      });
+    }
   } catch (err) {
     console.error('Error saving outgoing message:', err.message);
   }

@@ -1,5 +1,4 @@
 import Order from '../models/Order.js';
-import { getPaymentLinkStatus } from '../services/paymentService.js';
 import { sendButtonMessage } from '../utils/whatsapp.js';
 import conversation from '../models/conversationStateService.js';
 import cartService from '../services/cartService.js';
@@ -42,73 +41,12 @@ async function sendPaymentConfirmation(order) {
 }
 
 /**
- * Payment callback endpoint (for browser redirect)
- * This is called when user returns from Razorpay payment page
- */
-export async function handlePaymentCallback(req, res) {
-  try {
-    const { razorpay_payment_link_id, razorpay_payment_id, razorpay_signature } = req.query;
-    
-    if (!razorpay_payment_link_id) {
-      return res.status(400).send('Payment link ID is required');
-    }
-    
-    // Get payment link status
-    const linkStatus = await getPaymentLinkStatus(razorpay_payment_link_id);
-    
-    if (linkStatus.success) {
-      // Find order by payment link ID
-      const order = await Order.findOne({ razorpayOrderId: razorpay_payment_link_id });
-      
-      if (order) {
-        if (linkStatus.status === 'paid') {
-          // Check if already processed to avoid duplicate messages
-          const wasAlreadyCompleted = order.paymentStatus === 'completed';
-          
-          // Update order
-          order.paymentStatus = 'completed';
-          order.razorpayPaymentId = razorpay_payment_id;
-          order.razorpaySignature = razorpay_signature;
-          order.status = 'confirmed';
-          await order.save();
-          
-          // Send WhatsApp confirmation ONLY if not already sent
-          if (!wasAlreadyCompleted) {
-            try {
-              await sendPaymentConfirmation(order);
-            } catch (whatsappError) {
-              console.error('⚠️ WhatsApp confirmation failed:', whatsappError.message);
-            }
-          }
-          
-          // Simple success response
-          return res.send('Payment successful! Check your WhatsApp for order confirmation.');
-        } else {
-          // Payment failed
-          order.paymentStatus = 'failed';
-          await order.save();
-          
-          console.log('❌ Payment failed for order:', order._id);
-          
-          return res.send('Payment failed. Please contact us on WhatsApp.');
-        }
-      }
-    }
-    
-    res.send('Payment processing...');
-  } catch (error) {
-    console.error('❌ Error processing payment callback:', error);
-    res.status(500).send('Error processing payment');
-  }
-}
-
-/**
- * Razorpay webhook endpoint
- * This receives real-time notifications from Razorpay for payment events
- * This is the PREFERRED method as it works even if user closes browser
+ * Razorpay webhook handler - processes payment events
+ * This is called by Razorpay when payment status changes
  */
 export async function handlePaymentWebhook(req, res) {
   try {
+    
     const event = req.body;
     
     console.log('📥 Razorpay webhook received:', event.event);
