@@ -50,6 +50,34 @@ await connectDB();
 
 // Load catalog on startup (async now)
 await loadCatalog()
+
+// Home route
+app.get("/", (req, res) => {
+  res.send(`
+    <html>
+      <head>
+        <title>Bhuramal – WhatsApp-based Payments</title>
+      </head>
+      <body style="font-family: Arial; padding: 40px;">
+        <h1>Bhuramal</h1>
+        <p>
+          We operate a WhatsApp-based business where customers place orders
+          and make payments using secure payment gateways.
+        </p>
+
+        <p>
+          Payments are collected via Razorpay using hosted payment links.
+          Customers interact with us through WhatsApp Business.
+        </p>
+
+        <p>
+          For any queries, Customers can reach us via WhatsApp after initiating a conversation through our official WhatsApp Business account.
+        </p>
+      </body>
+    </html>
+  `);
+});
+
 //Route for testing server status
 app.get('/health', (req, res) => {
   res.send('alive');
