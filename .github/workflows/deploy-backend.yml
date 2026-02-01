@@ -29,7 +29,11 @@ jobs:
 
       - name: Trigger Render Deploy
         run: |
-          curl -X POST ${{ secrets.RENDER_DEPLOY_HOOK }}
+          if [ -z "${{ secrets.RENDER_DEPLOY_HOOK }}" ]; then
+            echo "⚠️ RENDER_DEPLOY_HOOK secret is not set. Skipping deployment."
+            exit 0
+          fi
+          curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"
 
       - name: Deployment Success Notification
         if: success()
