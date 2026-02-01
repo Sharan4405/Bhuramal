@@ -69,6 +69,21 @@ app.get("/", (req, res) => {
           Payments are collected via Razorpay using hosted payment links.
           Customers interact with us through WhatsApp Business.
         </p>
+        <p>
+          Contact Information
+WhatsApp: https://wa.me/919982180444
+Email: Bhuramalbhagirath@gmail.com
+
+Refund & Cancellation Policy
+Refunds are reviewed on a case-by-case basis. If approved, refunds
+will be processed within 5–7 business days to the original payment method.
+
+Business Location
+India
+
+Terms
+All payments are securely processed via Razorpay.
+By proceeding with a payment, you agree to our service terms.
 
         <p>
           For any queries, Customers can reach us via WhatsApp after initiating a conversation through our official WhatsApp Business account.
