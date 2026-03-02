@@ -142,6 +142,37 @@ class CartService {
   }
 
   /**
+   * Update quantity/weight of specific item in cart
+   */
+  async updateItemQuantity(userId, itemIndex, newWeight) {
+    try {
+      const cart = await Cart.findOne({ userId });
+      if (!cart || !cart.items[itemIndex]) {
+        return { success: false, error: 'Item not found' };
+      }
+
+      const item = cart.items[itemIndex];
+      
+      // For gram-based items, update weight and recalculate price
+      if (item.unit === 'grams') {
+        const pricePerGram = item.totalPrice / item.weight;
+        item.weight = newWeight;
+        item.totalPrice = pricePerGram * newWeight;
+      } else {
+        // For non-gram items, update quantity
+        item.quantity = newWeight;
+        item.totalPrice = item.unitPrice * newWeight;
+      }
+
+      await cart.save();
+      return { success: true, cart };
+    } catch (error) {
+      console.error('❌ Error updating item quantity:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
    * Format cart for display
    */
   async formatCartSummary(userId) {
