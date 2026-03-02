@@ -1,5 +1,6 @@
 import Order from '../models/Order.js';
 import { asyncHandler, successResponse, errorResponse, notFoundResponse, validationError } from '../utils/responseHandler.js';
+import { sendMessage } from '../utils/whatsapp.js';
 
 // Helper to find order by _id or orderId
 const findOrder = async (id) => {
@@ -100,7 +101,7 @@ export const getOrderById = asyncHandler(async (req, res) => {
 export const updateOrderStatus = asyncHandler(async (req, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, statusMessage } = req.body;
     
     console.log('Updating order status:', { id, status });
     
@@ -119,7 +120,59 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
     
     console.log('Found order:', order.orderId);
     order.status = status;
+    if (statusMessage) {
+      order.statusMessage = statusMessage;
+    }
     await order.save();
+    
+    // Send WhatsApp notification to customer
+    try {
+      const statusEmoji = {
+        'pending': '🛒',
+        'confirmed': '✅',
+        'processing': '📦',
+        'shipped': '🚚',
+        'delivery': '🚗',
+        'delivered': '✨',
+        'cancelled': '❌'
+      };
+      
+      const statusText = {
+        'pending': 'Order Placed',
+        'confirmed': 'Payment Confirmed',
+        'processing': 'Preparing Your Order',
+        'shipped': 'Shipped',
+        'delivery': 'Out for Delivery',
+        'delivered': 'Delivered',
+        'cancelled': 'Cancelled'
+      };
+      
+      let notificationMessage = `${statusEmoji[status]} *Order Status Update*\n\n`;
+      notificationMessage += `Order ID: ${order.orderId}\n`;
+      notificationMessage += `Status: ${statusText[status]}\n\n`;
+      
+      // Add custom status message if provided
+      if (statusMessage && statusMessage.trim()) {
+        notificationMessage += `${statusMessage}\n\n`;
+      }
+      
+      // Add helpful info based on status
+      if (status === 'shipped' || status === 'delivery') {
+        notificationMessage += `📍 Your order is on its way!\n\n`;
+      } else if (status === 'delivered') {
+        notificationMessage += `🎉 Thank you for shopping with Bhuramal Bhagirath Prasad!\n\n`;
+      } else if (status === 'cancelled') {
+        notificationMessage += `If you have any questions, please contact our support team.\n\n`;
+      }
+      
+      notificationMessage += `Need help? Type "menu" to access support options.`;
+      
+      await sendMessage(order.phoneNumber, notificationMessage);
+      console.log(`✅ Status notification sent to ${order.phoneNumber}`);
+    } catch (notificationError) {
+      console.error('❌ Error sending status notification:', notificationError.message);
+      // Don't fail the request if notification fails
+    }
     
     console.log('Order status updated successfully');
     return successResponse(res, { data: order }, `Order status updated to ${status}`);

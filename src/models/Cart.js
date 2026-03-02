@@ -44,6 +44,13 @@ const cartSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
+  reminderSent: {
+    type: Boolean,
+    default: false
+  },
+  reminderSentAt: {
+    type: Date
+  },
   expiresAt: {
     type: Date,
     index: { expires: 0 } // TTL index - cart expires after this date

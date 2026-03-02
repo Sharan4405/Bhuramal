@@ -4,6 +4,7 @@
  */
 
 import Cart from '../models/Cart.js';
+import { resetCartReminder } from './cartAbandonmentService.js';
 
 class CartService {
   /**
@@ -60,6 +61,9 @@ class CartService {
       }
 
       await cart.save();
+      
+      // Reset reminder flag since cart was updated
+      await resetCartReminder(userId);
 
       return { success: true, cart };
     } catch (error) {
@@ -162,6 +166,10 @@ class CartService {
         // For non-gram items, update quantity
         item.quantity = newWeight;
         item.totalPrice = item.unitPrice * newWeight;
+      
+      // Reset reminder flag since cart was updated
+      await resetCartReminder(userId);
+      
       }
 
       await cart.save();

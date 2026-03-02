@@ -399,6 +399,74 @@ async function handleIncoming(req, res) {
             await conversation.setState(from, 'ordering');
             continue;
           }
+          
+          // Handle cart reminder buttons globally (can be clicked from any state)
+          if (text === 'view_cart' && state !== 'menu') {
+            // If cart reminder button clicked from non-menu state
+            await conversation.setState(from, 'menu');
+            
+            if (await cartService.isEmpty(from)) {
+              await sendButtonMessage(
+                from,
+                '🛒 Your cart is empty.\n\nStart shopping to add items!',
+                [{ id: 'orders', title: '🛒 Start Shopping' }]
+              );
+            } else {
+              const cart = await cartService.getCart(from);
+              const sections = [
+                {
+                  title: "Your Cart Items",
+                  rows: cart.items.map((item, idx) => {
+                    const weight = item.unit === 'grams' ? `${item.weight}g` : `${item.weight} ${item.unit} × ${item.quantity}`;
+                    return {
+                      id: `cart_item_${idx}`,
+                      title: `${idx + 1}. ${item.name}`,
+                      description: `${weight} - ₹${item.totalPrice.toFixed(2)}`
+                    };
+                  })
+                },
+                {
+                  title: "Actions",
+                  rows: [
+                    { id: 'checkout', title: '💳 Checkout', description: 'Proceed to payment' },
+                    { id: 'orders', title: '➕ Add More Items', description: 'Continue shopping' },
+                    { id: 'clear_cart', title: '🗑️ Clear Cart', description: 'Remove all items' }
+                  ]
+                }
+              ];
+              
+              const summary = await cartService.getCartSummary(from);
+              await sendListMessage(
+                from,
+                `🛒 *Your Cart*\n\n📦 Total Items: ${summary.itemCount}\n💰 *Total: ₹${summary.totalAmount.toFixed(2)}*\n\n*Select an item to edit or remove it*`,
+                sections,
+                'View Cart'
+              );
+              await conversation.setState(from, 'view_cart_options');
+            }
+            continue;
+          }
+          
+          // Handle checkout from reminder (can be clicked from any state)
+          if (text === 'checkout' && state !== 'view_cart_options') {
+            // Direct checkout from reminder
+            const isEmpty = await cartService.isEmpty(from);
+            if (isEmpty) {
+              await sendButtonMessage(
+                from,
+                '🛒 Your cart is empty.\n\nAdd items first!',
+                [{ id: 'orders', title: '🛒 Start Shopping' }]
+              );
+              await conversation.setState(from, 'menu');
+            } else {
+              await conversation.setState(from, 'address_input');
+              await sendMessage(
+                from,
+                `📍 *Delivery Address Required*\n\nPlease provide your complete delivery address:\n\n*Example:*\nJohn Doe\n123, MG Road\nBangalore - 560001`
+              );
+            }
+            continue;
+          }
 
           // Main menu handler
           if (state === 'menu') {
@@ -506,18 +574,23 @@ async function handleIncoming(req, res) {
           if (state === 'cart_item_action') {
             const stateData = await conversation.getState(from, true);
             const itemIndex = stateData?.metadata?.itemIndex;
+            console.log(`🔧 Cart item action - text: ${text}, itemIndex: ${itemIndex}`);
             
             // Handle edit quantity
             if (text.startsWith('edit_')) {
               const idx = parseInt(text.split('_')[1]);
+              console.log(`✏️ Edit quantity requested for item ${idx}`);
               const cart = await cartService.getCart(from);
               const item = cart.items[idx];
               
               if (!item) {
+                console.log(`❌ Item not found at index ${idx}`);
                 await sendMessage(from, '❌ Item not found.');
                 continue;
               }
 
+              console.log(`📦 Editing item: ${item.name} (${item.weight}${item.unit})`);
+              
               // Show quantity options directly
               const quantityOptions = item.unit === 'grams'
                 ? [100, 250, 500, 1000]
@@ -646,22 +719,29 @@ async function handleIncoming(req, res) {
               await conversation.setState(from, 'view_cart_options');
               continue;
             }
+            
+            // If no match, show error
+            await sendMessage(from, "Please use the buttons above.");
+            continue;
           }
 
           // Updating quantity handler
           if (state === 'updating_quantity') {
             const stateData = await conversation.getState(from, true);
             const itemIndex = stateData?.metadata?.itemIndex;
+            console.log(`📊 Updating quantity - text: ${text}, storedItemIndex: ${itemIndex}`);
             
             // Handle update quantity
             if (text.startsWith('update_')) {
               const parts = text.split('_');
               const idx = parseInt(parts[1]);
               const newQty = parseInt(parts[2]);
+              console.log(`✅ Update request - idx: ${idx}, quantity: ${newQty}`);
               
               const result = await cartService.updateItemQuantity(from, idx, newQty);
               
               if (result.success) {
+                console.log(`✅ Quantity updated successfully`);
                 const updatedItem = result.cart.items[idx];
                 const weight = updatedItem.unit === 'grams' ? `${updatedItem.weight}g` : `${updatedItem.quantity} ${updatedItem.unit}`;
                 
@@ -743,6 +823,10 @@ async function handleIncoming(req, res) {
               await conversation.setState(from, 'view_cart_options');
               continue;
             }
+            
+            // If no match, show error
+            await sendMessage(from, "Please use the list options above.");
+            continue;
           }
 
           // Ordering handler - selecting category

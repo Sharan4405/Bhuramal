@@ -3,6 +3,7 @@ import { createServer } from 'http';
 import app from './app.js';
 import { initializeSocket } from './services/socketService.js';
 import { cleanupOldStates, CLEANUP_INTERVAL } from './models/conversationStateService.js';
+import { startCartAbandonmentChecker } from './services/cartAbandonmentService.js';
 
 const port = process.env.PORT || 4000;
 
@@ -18,6 +19,9 @@ httpServer.listen(port, () => {
   setInterval(() => {
     cleanupOldStates();
   }, CLEANUP_INTERVAL);
+  
+  // Start cart abandonment checker
+  startCartAbandonmentChecker();
 });
 
 export default app;
