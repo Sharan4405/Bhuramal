@@ -434,7 +434,6 @@ async function handleIncoming(req, res) {
                   ]
                 }
               ];
-              
               await sendListMessage(
                 from,
                 `🛒 *Your Cart*\n\n${itemsText}\n\n━━━━━━━━━━━━━━━━\n📦 Total Items: ${summary.totalItems}\n💰 *Total Amount: ₹${summary.totalAmount.toFixed(2)}*`,

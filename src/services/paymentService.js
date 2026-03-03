@@ -31,9 +31,11 @@ export async function createPaymentLink(orderData) {
         contact: customerPhone
       },
       notify: {
-        sms: false,      // Disabled - we send our own WhatsApp message
-        whatsapp: false  // Disabled - we send our own WhatsApp message
+        sms: true,       // Enable Razorpay SMS notifications (instant)
+        whatsapp: true,  // Enable Razorpay WhatsApp notifications (instant)
+        email: false     // Disable email if not needed
       },
+      reminder_enable: true, // Send payment reminders if not paid
       notes: {
         order_id: orderId
       }
