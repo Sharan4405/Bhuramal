@@ -35,7 +35,7 @@ async function sendCartReminder(userId, cart) {
       `${itemSummary}${moreItems}\n\n` +
       `💰 Total: ₹${totalAmount.toFixed(2)}\n\n` +
       `Complete your order now to enjoy our premium dry fruits and nuts! 🌟\n\n` +
-      `Your cart will expire in 4 hours.`,
+      `Your cart will expire within 24 hours.`,
       [
         { id: 'view_cart', title: '🛒 View Cart' },
         { id: 'checkout', title: '💳 Checkout Now' },

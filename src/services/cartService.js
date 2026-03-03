@@ -28,7 +28,7 @@ class CartService {
         cart = new Cart({
           userId,
           items: [],
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+          expiresAt: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000) // 1 day
         });
       }
 
@@ -166,13 +166,13 @@ class CartService {
         // For non-gram items, update quantity
         item.quantity = newWeight;
         item.totalPrice = item.unitPrice * newWeight;
+      }
+
+      await cart.save();
       
       // Reset reminder flag since cart was updated
       await resetCartReminder(userId);
       
-      }
-
-      await cart.save();
       return { success: true, cart };
     } catch (error) {
       console.error('❌ Error updating item quantity:', error);
