@@ -478,36 +478,32 @@ async function handleIncoming(req, res) {
                 );
               } else {
                 const cart = await cartService.getCart(from);
+                const summary = await cartService.getCartSummary(from);
                 
-                // Build cart with inline edit/remove options for each item
+                // Build items list in message text
+                let itemsText = cart.items.map((item, idx) => {
+                  const weight = item.unit === 'grams' ? `${item.weight}g` : `${item.weight} ${item.unit}`;
+                  const qty = item.quantity > 1 ? ` × ${item.quantity}` : '';
+                  return `${idx + 1}. *${item.name}*\n   ${weight}${qty} - ₹${item.totalPrice.toFixed(2)}`;
+                }).join('\n\n');
+                
                 const sections = [
-                  {
-                    title: "Your Cart Items",
-                    rows: cart.items.map((item, idx) => {
-                      const weight = item.unit === 'grams' ? `${item.weight}g` : `${item.weight} ${item.unit} × ${item.quantity}`;
-                      return {
-                        id: `cart_item_${idx}`,
-                        title: `${idx + 1}. ${item.name}`,
-                        description: `${weight} - ₹${item.totalPrice.toFixed(2)}`
-                      };
-                    })
-                  },
                   {
                     title: "Actions",
                     rows: [
+                      { id: 'change_quantity', title: '✏️ Change Quantity', description: 'Edit item quantities' },
                       { id: 'checkout', title: '💳 Checkout', description: 'Proceed to payment' },
-                      { id: 'orders', title: '➕ Add More Items', description: 'Continue shopping' },
-                      { id: 'clear_cart', title: '🗑️ Clear Cart', description: 'Remove all items' }
+                      { id: 'orders', title: '➕ Continue Shopping', description: 'Add more items' },
+                      { id: 'main_menu', title: '🏠 Main Menu', description: 'Back to menu' }
                     ]
                   }
                 ];
                 
-                const summary = await cartService.getCartSummary(from);
                 await sendListMessage(
                   from,
-                  `🛒 *Your Cart*\n\n📦 Total Items: ${summary.itemCount}\n💰 *Total: ₹${summary.totalAmount.toFixed(2)}*\n\n*Select an item to edit or remove it*`,
+                  `🛒 *Your Cart*\n\n${itemsText}\n\n━━━━━━━━━━━━━━━━\n📦 Total Items: ${summary.totalItems}\n💰 *Total Amount: ₹${summary.totalAmount.toFixed(2)}*`,
                   sections,
-                  'View Cart'
+                  'Select Action'
                 );
                 await conversation.setState(from, 'view_cart_options');
               }
@@ -522,6 +518,17 @@ async function handleIncoming(req, res) {
             // Handle Change Quantity action
             if (text === 'change_quantity') {
               const cart = await cartService.getCart(from);
+              
+              if (!cart.items || cart.items.length === 0) {
+                await sendButtonMessage(
+                  from,
+                  '🛒 Your cart is empty.\n\nStart shopping to add items!',
+                  [{ id: 'orders', title: '🛒 Start Shopping' }]
+                );
+                await conversation.setState(from, 'menu');
+                continue;
+              }
+              
               const sections = [
                 {
                   title: "Select Item to Edit",
@@ -560,18 +567,25 @@ async function handleIncoming(req, res) {
               continue;
             }
             
+            // Handle orders (continue shopping)
             if (text === 'orders') {
               await showOrderCategories(from);
               await conversation.setState(from, 'ordering');
-            } else if (text === 'checkout') {
+              continue;
+            }
+            
+            // Handle checkout
+            if (text === 'checkout') {
               await conversation.setState(from, 'address_input');
               await sendMessage(
                 from,
                 `📍 *Delivery Address Required*\n\nPlease provide your complete delivery address:\n\n*Example:*\nJohn Doe\n123, MG Road\nBangalore - 560001`
               );
-            } else {
-              await sendMessage(from, "Please use the options above.");
+              continue;
             }
+            
+            // If unrecognized action
+            await sendMessage(from, "Please use the options above.");
             continue;
           }
 
