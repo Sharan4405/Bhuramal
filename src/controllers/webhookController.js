@@ -426,10 +426,11 @@ async function handleIncoming(req, res) {
                 {
                   title: "Actions",
                   rows: [
-                    { id: 'change_quantity', title: '✏️ Change Quantity', description: 'Edit item quantities' },
-                    { id: 'checkout', title: '💳 Checkout', description: 'Proceed to payment' },
-                    { id: 'orders', title: '➕ Continue Shopping', description: 'Add more items' },
-                    { id: 'main_menu', title: '🏠 Main Menu', description: 'Back to menu' }
+                    { id: 'change_quantity', title: 'Change Quantity', description: 'Edit item quantities' },
+                    { id: 'checkout', title: 'Checkout', description: 'Proceed to payment' },
+                    { id: 'orders', title: 'Continue Shopping', description: 'Add more items' },
+                    { id: 'clear_cart', title: 'Clear Cart', description: 'Remove all items' },
+                    { id: 'main_menu', title: 'Main Menu', description: 'Back to menu' }
                   ]
                 }
               ];
@@ -494,6 +495,7 @@ async function handleIncoming(req, res) {
                       { id: 'change_quantity', title: '✏️ Change Quantity', description: 'Edit item quantities' },
                       { id: 'checkout', title: '💳 Checkout', description: 'Proceed to payment' },
                       { id: 'orders', title: '➕ Continue Shopping', description: 'Add more items' },
+                      { id: 'clear_cart', title: '🗑️ Clear Cart', description: 'Remove all items' },
                       { id: 'main_menu', title: '🏠 Main Menu', description: 'Back to menu' }
                     ]
                   }
@@ -581,6 +583,18 @@ async function handleIncoming(req, res) {
                 from,
                 `📍 *Delivery Address Required*\n\nPlease provide your complete delivery address:\n\n*Example:*\nJohn Doe\n123, MG Road\nBangalore - 560001`
               );
+              continue;
+            }
+            
+            // Handle clear cart
+            if (text === 'clear_cart') {
+              await cartService.clearCart(from);
+              await sendButtonMessage(
+                from,
+                '✅ Cart cleared successfully!',
+                [{ id: 'orders', title: '🛒 Start Shopping' }]
+              );
+              await conversation.setState(from, 'menu');
               continue;
             }
             
@@ -717,9 +731,9 @@ async function handleIncoming(req, res) {
                 
                 await sendListMessage(
                   from,
-                  `🛒 *Your Cart*\n\n${itemsText}\n\n━━━━━━━━━━━━━━━━\n📦 Total Items: ${summary.totalItems}\n💰 *Total Amount: ₹${summary.totalAmount.toFixed(2)}*`,
+                  `🛒 *Your Cart*\n\n${itemsText}\n📦 Total Items: ${summary.totalItems}\n💰 *Total Amount: ₹${summary.totalAmount.toFixed(2)}*`,
                   sections,
-                  'Select Action'
+                  'Select Options'
                 );
                 await conversation.setState(from, 'view_cart_options');
               } else {
