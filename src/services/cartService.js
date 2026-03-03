@@ -48,6 +48,8 @@ class CartService {
           cart.items[existingItemIndex].totalPrice = 
             cart.items[existingItemIndex].quantity * cart.items[existingItemIndex].unitPrice;
         }
+        // Mark items array as modified for Mongoose
+        cart.markModified('items');
       } else {
         // Add new item
         cart.items.push({
@@ -161,13 +163,15 @@ class CartService {
       if (item.unit === 'grams') {
         const pricePerGram = item.totalPrice / item.weight;
         item.weight = newWeight;
-        item.totalPrice = pricePerGram * newWeight;
+        item.totalPrice = Math.round(pricePerGram * newWeight * 100) / 100;
       } else {
         // For non-gram items, update quantity
         item.quantity = newWeight;
-        item.totalPrice = item.unitPrice * newWeight;
+        item.totalPrice = Math.round(item.unitPrice * newWeight * 100) / 100;
       }
 
+      // Mark the items array as modified (required for Mongoose subdocuments)
+      cart.markModified('items');
       await cart.save();
       
       // Reset reminder flag since cart was updated
@@ -175,7 +179,6 @@ class CartService {
       
       return { success: true, cart };
     } catch (error) {
-      console.error('❌ Error updating item quantity:', error);
       return { success: false, error: error.message };
     }
   }
