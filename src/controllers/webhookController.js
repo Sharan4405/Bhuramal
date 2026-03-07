@@ -14,7 +14,7 @@ import { calculatePrice, getPriceBreakdown } from '../utils/priceCalculator.js';
 const MAIN_MENU = {
   buttons: [
     { id: 'orders', title: '🛒 Order Now' },
-    { id: 'view_cart', title: '🛒 View Cart' },
+    { id: 'track_order', title: '📦 Track Order' },
     { id: 'support', title: '💬 Support & Queries' }
   ],
   footer: 'Type "menu" anytime to return here'
@@ -40,7 +40,6 @@ async function navigateToSupport(from) {
     from,
     '💬 *Support & Queries*\n\nHow can we help you today?',
     [
-      { id: 'track_order', title: '📦 Track Order' },
       { id: 'view_address', title: '📍 View Address' },
       { id: 'contact_team', title: '👨‍💼 Contact Team' }
     ]
@@ -354,10 +353,7 @@ async function handleIncoming(req, res) {
 
           // Support menu handler
           if (state === 'support_menu') {
-            if (text === 'track_order') {
-              await conversation.setState(from, 'awaiting_order_id');
-              await sendMessage(from, '📦 *Track Your Order*\n\nPlease enter your Order ID to check the status.\n\nYou can find the Order ID in your payment confirmation message.\n\nType "menu" to return.');
-            } else if (text === 'view_address') {
+            if (text === 'view_address') {
               await sendStoreLocation(from);
             } else if (text === 'contact_team') {
               await conversation.setState(from, 'manual');
@@ -468,46 +464,9 @@ async function handleIncoming(req, res) {
 
           // Main menu handler
           if (state === 'menu') {
-            if (text === 'view_cart') {
-              // Show cart contents
-              if (await cartService.isEmpty(from)) {
-                await sendButtonMessage(
-                  from,
-                  '🛒 Your cart is empty.\n\nStart shopping to add items!',
-                  [{ id: 'orders', title: '🛒 Start Shopping' }]
-                );
-              } else {
-                const cart = await cartService.getCart(from);
-                const summary = await cartService.getCartSummary(from);
-                
-                // Build items list in message text
-                let itemsText = cart.items.map((item, idx) => {
-                  const weight = item.unit === 'grams' ? `${item.weight}g` : `${item.weight} ${item.unit}`;
-                  const qty = item.quantity > 1 ? ` × ${item.quantity}` : '';
-                  return `${idx + 1}. *${item.name}*\n   ${weight}${qty} - ₹${item.totalPrice.toFixed(2)}`;
-                }).join('\n\n');
-                
-                const sections = [
-                  {
-                    title: "Actions",
-                    rows: [
-                      { id: 'change_quantity', title: '✏️ Change Quantity', description: 'Edit item quantities' },
-                      { id: 'checkout', title: '💳 Checkout', description: 'Proceed to payment' },
-                      { id: 'orders', title: '➕ Continue Shopping', description: 'Add more items' },
-                      { id: 'clear_cart', title: '🗑️ Clear Cart', description: 'Remove all items' },
-                      { id: 'main_menu', title: '🏠 Main Menu', description: 'Back to menu' }
-                    ]
-                  }
-                ];
-                
-                await sendListMessage(
-                  from,
-                  `🛒 *Your Cart*\n\n${itemsText}\n\n━━━━━━━━━━━━━━━━\n📦 Total Items: ${summary.totalItems}\n💰 *Total Amount: ₹${summary.totalAmount.toFixed(2)}*`,
-                  sections,
-                  'Select Action'
-                );
-                await conversation.setState(from, 'view_cart_options');
-              }
+            if (text === 'track_order') {
+              await conversation.setState(from, 'awaiting_order_id');
+              await sendMessage(from, '📦 *Track Your Order*\n\nPlease enter your Order ID to check the status.\n\nYou can find the Order ID in your payment confirmation message.\n\nType "menu" to return.');
             } else {
               await sendMessage(from, "Please use the buttons above.");
             }
@@ -941,9 +900,9 @@ async function handleIncoming(req, res) {
                 `💰 Price: ₹${totalPrice.toFixed(2)}\n\n${await cartService.formatCartSummary(from)}\n\n` +
                 `What would you like to do next?`,
                 [
-                  { id: 'add_more', title: '➕ Add More Items' },
-                  { id: 'checkout', title: '💳 Checkout' },
-                  { id: 'back_to_quantity', title: '↩️ Back to Quantity' }
+                  { id: 'add_more', title: 'Add More Items' },
+                  { id: 'view_cart', title: 'View Cart'},
+                  { id: 'checkout', title: 'Checkout' },
                 ]
               );
               
@@ -965,51 +924,46 @@ async function handleIncoming(req, res) {
                 from,
                 `📍 *Delivery Address Required*\n\nPlease provide your complete delivery address:\n\n*Example:*\nJohn Doe\n123, MG Road\nBangalore - 560001`
               );
-            } else if (text === 'back_to_quantity') {
-              // Go back to quantity selection for the same item
-              const stateData = await conversation.getState(from, true);
-              const selectedItem = stateData?.metadata?.selectedItem;
-              const selectedCategory = stateData?.metadata?.selectedCategory;
+            } else if (text === 'view_cart') {
+              // Show full cart with options to edit quantities
+              const cart = await cartService.getCart(from);
+              const summary = await cartService.getCartSummary(from);
               
-              if (selectedItem) {
-                // Show quantity selection again
-                const breakdown = getPriceBreakdown(selectedItem);
-                const price250 = calculatePrice(selectedItem, 250);
-                const price500 = calculatePrice(selectedItem, 500);
-                const price1000 = calculatePrice(selectedItem, 1000);
+              if (cart.items.length === 0) {
+                await sendButtonMessage(
+                  from,
+                  '🛒 Your cart is empty.\n\nStart shopping to add items!',
+                  [{ id: 'orders', title: '🛒 Start Shopping' }]
+                );
+                await conversation.setState(from, 'menu');
+              } else {
+                // Build items list in message text
+                let itemsText = cart.items.map((item, idx) => {
+                  const weight = item.unit === 'grams' ? `${item.weight}g` : `${item.weight} ${item.unit}`;
+                  const qty = item.quantity > 1 ? ` × ${item.quantity}` : '';
+                  return `${idx + 1}. *${item.name}*\n   ${weight}${qty} - ₹${item.totalPrice.toFixed(2)}`;
+                }).join('\n\n');
                 
                 const sections = [
                   {
-                    title: "Select Quantity",
+                    title: "Actions",
                     rows: [
-                      { id: 'qty_250', title: '250 gm', description: `₹${price250.toFixed(2)}` },
-                      { id: 'qty_500', title: '500 gm', description: `₹${price500.toFixed(2)}` },
-                      { id: 'qty_1000', title: '1 kg', description: `₹${price1000.toFixed(2)}` }
+                      { id: 'change_quantity', title: '✏️ Change Quantity', description: 'Edit item quantities' },
+                      { id: 'checkout', title: '💳 Checkout', description: 'Proceed to payment' },
+                      { id: 'orders', title: '➕ Continue Shopping', description: 'Add more items' },
+                      { id: 'clear_cart', title: '🗑️ Clear Cart', description: 'Remove all items' },
+                      { id: 'main_menu', title: '🏠 Main Menu', description: 'Back to menu' }
                     ]
-                  },
-                  {
-                    title: "Navigation",
-                    rows: [{ id: 'go_back_items', title: '↩️ Back to Items', description: 'Choose a different item' }]
                   }
                 ];
                 
                 await sendListMessage(
                   from,
-                  `📦 *${selectedItem.name}*\n\n` +
-                  `📊 Base: ${selectedItem.weight} ${selectedItem.unit} - ₹${selectedItem.price}\n` +
-                  `💰 Price per kg: ₹${breakdown.pricePerKg}\n\n` +
-                  `Please select the quantity you want to order:`,
+                  `🛒 *Your Cart*\n\n${itemsText}\n\n━━━━━━━━━━━━━━━━\n📦 Total Items: ${summary.totalItems}\n💰 *Total Amount: ₹${summary.totalAmount.toFixed(2)}*`,
                   sections,
-                  "Select Quantity"
+                  'Select Action'
                 );
-                
-                await conversation.setState(from, 'quantity_input', {
-                  selectedItem: selectedItem,
-                  selectedCategory: selectedCategory
-                });
-              } else {
-                await showOrderCategories(from);
-                await conversation.setState(from, 'ordering');
+                await conversation.setState(from, 'view_cart_options');
               }
             } else {
               await sendMessage(from, `❓ Unrecognized option: "${text}". Please use the buttons to proceed.`);
