@@ -50,6 +50,7 @@ Authenticate an admin user and receive a JWT token.
 **Authentication:** None
 
 **Request Body:**
+
 ```json
 {
   "username": "admin",
@@ -58,6 +59,7 @@ Authenticate an admin user and receive a JWT token.
 ```
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -71,10 +73,12 @@ Authenticate an admin user and receive a JWT token.
 ```
 
 **Error Responses:**
+
 - `400 Bad Request` - Missing username or password
 - `401 Unauthorized` - Invalid credentials
 
 **Example:**
+
 ```bash
 curl -X POST http://localhost:4000/api/auth/login \
   -H "Content-Type: application/json" \
@@ -93,6 +97,7 @@ Create the first admin account (typically done during setup).
 **Authentication:** None (disable in production after first admin)
 
 **Request Body:**
+
 ```json
 {
   "username": "admin",
@@ -102,6 +107,7 @@ Create the first admin account (typically done during setup).
 ```
 
 **Success Response (201 Created):**
+
 ```json
 {
   "success": true,
@@ -123,6 +129,7 @@ Invalidate the current JWT token (client-side token removal).
 **Authentication:** Required
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -143,6 +150,7 @@ Retrieve a list of all products with optional filtering.
 **Authentication:** None
 
 **Query Parameters:**
+
 - `search` (optional) - Search products by name or description
 - `category` (optional) - Filter by category
 - `inStock` (optional) - Filter by stock availability (true/false)
@@ -150,6 +158,7 @@ Retrieve a list of all products with optional filtering.
 - `maxPrice` (optional) - Maximum price filter
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -172,6 +181,7 @@ Retrieve a list of all products with optional filtering.
 ```
 
 **Example:**
+
 ```bash
 # Get all products
 curl http://localhost:4000/api/products
@@ -189,19 +199,16 @@ Get a list of all unique product categories.
 **Authentication:** None
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
-  "categories": [
-    "Beverages",
-    "Snacks",
-    "Groceries",
-    "Spices"
-  ]
+  "categories": ["Beverages", "Snacks", "Groceries", "Spices"]
 }
 ```
 
 **Example:**
+
 ```bash
 curl http://localhost:4000/api/products/categories
 ```
@@ -215,6 +222,7 @@ Add a new product to the catalog.
 **Authentication:** Required
 
 **Request Body:**
+
 ```json
 {
   "name": "Premium Coffee",
@@ -227,6 +235,7 @@ Add a new product to the catalog.
 ```
 
 **Success Response (201 Created):**
+
 ```json
 {
   "success": true,
@@ -247,6 +256,7 @@ Add a new product to the catalog.
 ```
 
 **Example:**
+
 ```bash
 curl -X POST http://localhost:4000/api/products \
   -H "Authorization: Bearer YOUR_TOKEN" \
@@ -269,9 +279,11 @@ Update an existing product.
 **Authentication:** Required
 
 **URL Parameters:**
+
 - `id` - Product MongoDB ObjectId
 
 **Request Body:**
+
 ```json
 {
   "name": "Premium Coffee (Updated)",
@@ -281,6 +293,7 @@ Update an existing product.
 ```
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -304,9 +317,11 @@ Remove a product from the catalog.
 **Authentication:** Required
 
 **URL Parameters:**
+
 - `id` - Product MongoDB ObjectId
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -323,6 +338,7 @@ Update stock levels for multiple products at once.
 **Authentication:** Required
 
 **Request Body:**
+
 ```json
 {
   "updates": [
@@ -339,6 +355,7 @@ Update stock levels for multiple products at once.
 ```
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -360,6 +377,7 @@ Retrieve orders with filtering, sorting, and pagination.
 **Authentication:** Required
 
 **Query Parameters:**
+
 - `search` (optional) - Search by order ID or customer phone
 - `status` (optional) - Filter by status: `pending`, `confirmed`, `preparing`, `out_for_delivery`, `delivered`, `cancelled`
 - `startDate` (optional) - Filter orders after this date (ISO format)
@@ -370,6 +388,7 @@ Retrieve orders with filtering, sorting, and pagination.
 - `sortOrder` (optional, default: `desc`) - Sort direction
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -408,6 +427,7 @@ Retrieve orders with filtering, sorting, and pagination.
 ```
 
 **Example:**
+
 ```bash
 # Get all orders
 curl http://localhost:4000/api/orders \
@@ -427,10 +447,12 @@ Get aggregated order statistics.
 **Authentication:** Required
 
 **Query Parameters:**
+
 - `startDate` (optional) - Start date for statistics
 - `endDate` (optional) - End date for statistics
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -462,9 +484,11 @@ Retrieve details of a specific order.
 **Authentication:** Required
 
 **URL Parameters:**
+
 - `id` - Order MongoDB ObjectId or orderId (BBP-YYYYMMDD-XXX)
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -512,9 +536,11 @@ Change the status of an order.
 **Authentication:** Required
 
 **URL Parameters:**
+
 - `id` - Order MongoDB ObjectId
 
 **Request Body:**
+
 ```json
 {
   "status": "confirmed",
@@ -523,6 +549,7 @@ Change the status of an order.
 ```
 
 **Valid Status Values:**
+
 - `pending`
 - `confirmed`
 - `preparing`
@@ -531,6 +558,7 @@ Change the status of an order.
 - `cancelled`
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -563,6 +591,7 @@ Update order details (items, address, etc.).
 **Authentication:** Required
 
 **Request Body:**
+
 ```json
 {
   "deliveryAddress": "456 New Address, City",
@@ -576,11 +605,14 @@ Update order details (items, address, etc.).
 ```
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
   "message": "Order updated successfully",
-  "order": { /* updated order object */ }
+  "order": {
+    /* updated order object */
+  }
 }
 ```
 
@@ -593,9 +625,11 @@ Soft delete or permanently delete an order.
 **Authentication:** Required
 
 **Query Parameters:**
+
 - `permanent` (optional, default: false) - Permanently delete if true
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -616,12 +650,14 @@ Retrieve all customer conversations.
 **Authentication:** Required
 
 **Query Parameters:**
+
 - `status` (optional) - Filter by status: `active`, `resolved`
 - `search` (optional) - Search by customer phone or name
 - `page` (optional) - Page number
 - `limit` (optional) - Items per page
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -650,13 +686,16 @@ Retrieve all messages for a specific conversation.
 **Authentication:** Required
 
 **URL Parameters:**
+
 - `id` - Conversation MongoDB ObjectId
 
 **Query Parameters:**
+
 - `limit` (optional, default: 50) - Number of messages
 - `before` (optional) - Get messages before this timestamp
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -696,6 +735,7 @@ Mark a conversation as resolved.
 **Authentication:** Required
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -717,6 +757,7 @@ Reopen a resolved conversation.
 **Authentication:** Required
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -742,6 +783,7 @@ Send a WhatsApp message to a customer from the admin dashboard.
 **Authentication:** Required
 
 **Request Body:**
+
 ```json
 {
   "to": "+919876543210",
@@ -750,6 +792,7 @@ Send a WhatsApp message to a customer from the admin dashboard.
 ```
 
 **Success Response (200 OK):**
+
 ```json
 {
   "success": true,
@@ -759,6 +802,7 @@ Send a WhatsApp message to a customer from the admin dashboard.
 ```
 
 **Error Response (400 Bad Request):**
+
 ```json
 {
   "success": false,
@@ -779,6 +823,7 @@ Verify WhatsApp webhook during setup.
 **Authentication:** None (verified via token)
 
 **Query Parameters:**
+
 - `hub.mode` - Should be "subscribe"
 - `hub.verify_token` - Must match WHATSAPP_VERIFY_TOKEN
 - `hub.challenge` - Random string to echo back
@@ -795,6 +840,7 @@ Receive incoming WhatsApp messages and events.
 **Authentication:** Signature verification
 
 **Request Body:** (WhatsApp API format)
+
 ```json
 {
   "object": "whatsapp_business_account",
@@ -823,6 +869,7 @@ Receive incoming WhatsApp messages and events.
 ```
 
 **Success Response (200 OK):**
+
 ```json
 {
   "status": "ok"
@@ -838,6 +885,7 @@ Receive payment notifications from Razorpay.
 **Authentication:** Signature verification
 
 **Request Body:** (Razorpay format)
+
 ```json
 {
   "event": "payment.captured",
@@ -858,6 +906,7 @@ Receive payment notifications from Razorpay.
 ```
 
 **Success Response (200 OK):**
+
 ```json
 {
   "status": "ok"
@@ -877,6 +926,7 @@ Check if the server is running.
 **Authentication:** None
 
 **Success Response (200 OK):**
+
 ```json
 {
   "status": "ok",
@@ -918,6 +968,7 @@ All endpoints follow a consistent error response format.
 ### Example Error Responses
 
 **401 Unauthorized:**
+
 ```json
 {
   "success": false,
@@ -926,6 +977,7 @@ All endpoints follow a consistent error response format.
 ```
 
 **404 Not Found:**
+
 ```json
 {
   "success": false,
@@ -934,6 +986,7 @@ All endpoints follow a consistent error response format.
 ```
 
 **422 Validation Error:**
+
 ```json
 {
   "success": false,
@@ -946,6 +999,7 @@ All endpoints follow a consistent error response format.
 ```
 
 **429 Rate Limit:**
+
 ```json
 {
   "success": false,
@@ -979,6 +1033,7 @@ List endpoints support pagination with these parameters:
 - `sortOrder` - `asc` or `desc` (default: desc)
 
 **Example:**
+
 ```bash
 curl "http://localhost:4000/api/orders?page=2&limit=10&sortBy=createdAt&sortOrder=desc" \
   -H "Authorization: Bearer YOUR_TOKEN"
@@ -993,37 +1048,42 @@ The system uses Socket.io for real-time updates. Connect to the WebSocket server
 ### Client → Server Events
 
 **Join Admin Room:**
+
 ```javascript
-socket.emit('join', { room: 'admin' });
+socket.emit("join", { room: "admin" });
 ```
 
 ### Server → Client Events
 
 **New Order:**
+
 ```javascript
-socket.on('newOrder', (order) => {
-  console.log('New order received:', order);
+socket.on("newOrder", (order) => {
+  console.log("New order received:", order);
 });
 ```
 
 **Order Update:**
+
 ```javascript
-socket.on('orderUpdate', (order) => {
-  console.log('Order status changed:', order);
+socket.on("orderUpdate", (order) => {
+  console.log("Order status changed:", order);
 });
 ```
 
 **New Message:**
+
 ```javascript
-socket.on('newMessage', (message) => {
-  console.log('New message:', message);
+socket.on("newMessage", (message) => {
+  console.log("New message:", message);
 });
 ```
 
 **Conversation Update:**
+
 ```javascript
-socket.on('conversationUpdate', (conversation) => {
-  console.log('Conversation updated:', conversation);
+socket.on("conversationUpdate", (conversation) => {
+  console.log("Conversation updated:", conversation);
 });
 ```
 
@@ -1052,14 +1112,11 @@ socket.on('conversationUpdate', (conversation) => {
 // lib/api.ts
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
-export async function apiCall(
-  endpoint: string,
-  options: RequestInit = {}
-) {
-  const token = localStorage.getItem('token');
-  
+export async function apiCall(endpoint: string, options: RequestInit = {}) {
+  const token = localStorage.getItem("token");
+
   const headers = {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
     ...(token && { Authorization: `Bearer ${token}` }),
     ...options.headers,
   };
@@ -1072,7 +1129,7 @@ export async function apiCall(
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.error || 'API request failed');
+    throw new Error(data.error || "API request failed");
   }
 
   return data;
@@ -1086,7 +1143,7 @@ export async function getOrders(filters = {}) {
 
 export async function updateOrderStatus(orderId: string, status: string) {
   return apiCall(`/api/orders/${orderId}/status`, {
-    method: 'PATCH',
+    method: "PATCH",
     body: JSON.stringify({ status }),
   });
 }
@@ -1097,6 +1154,7 @@ export async function updateOrderStatus(orderId: string, status: string) {
 ## Support
 
 For API issues or questions:
+
 - Check [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)
 - Review [ARCHITECTURE.md](./ARCHITECTURE.md) for system design
 - Open an issue on GitHub

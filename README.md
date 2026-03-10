@@ -7,6 +7,7 @@ A complete e-commerce chatbot system for WhatsApp with real-time admin dashboard
 This system enables customers to browse products, place orders, and make payments through WhatsApp, while admins manage everything through a web dashboard.
 
 **Key Components:**
+
 - WhatsApp chatbot for customer orders
 - Next.js admin dashboard for management
 - Razorpay payment integration
@@ -16,6 +17,7 @@ This system enables customers to browse products, place orders, and make payment
 ## Features
 
 **Customer Side:**
+
 - Browse products and categories via WhatsApp
 - Add items to cart and checkout
 - Make payments through Razorpay
@@ -23,6 +25,7 @@ This system enables customers to browse products, place orders, and make payment
 - View store location
 
 **Admin Side:**
+
 - Real-time order dashboard
 - Product inventory management
 - Live customer conversations
@@ -46,6 +49,7 @@ This system enables customers to browse products, place orders, and make payment
 ```
 
 **Flow:**
+
 1. Customer sends WhatsApp message → Webhook receives it
 2. Backend processes message using conversation state machine
 3. Responds with products/cart info/payment links
@@ -54,6 +58,7 @@ This system enables customers to browse products, place orders, and make payment
 6. Order created and customer notified
 
 **Tech Stack:**
+
 - **Backend:** Node.js, Express, MongoDB, Socket.io
 - **Frontend:** Next.js 16, React 19, TypeScript, Tailwind CSS
 - **Integration:** WhatsApp Business API, Razorpay
@@ -139,6 +144,7 @@ NODE_ENV=development
 See [API.md](./API.md) for complete documentation.
 
 **Main endpoints:**
+
 - `POST /api/auth/login` - Admin login
 - `GET /api/products` - List products
 - `GET /api/orders` - List orders (auth required)
@@ -150,18 +156,21 @@ See [API.md](./API.md) for complete documentation.
 ## Development
 
 **Run locally:**
+
 ```bash
 npm run dev          # Backend with nodemon
 cd client && npm run dev  # Frontend with hot reload
 ```
 
 **Build for production:**
+
 ```bash
 npm start            # Backend production mode
 cd client && npm run build && npm start  # Frontend production
 ```
 
 **Access points:**
+
 - Frontend: http://localhost:3000
 - Backend: http://localhost:4000
 - Health: http://localhost:4000/health
@@ -181,6 +190,7 @@ See [DEPLOYMENT.md](./DEPLOYMENT.md) for step-by-step instructions.
 ## Common Issues
 
 **Port already in use:**
+
 ```bash
 # Windows
 netstat -ano | findstr :4000
@@ -191,11 +201,13 @@ lsof -ti:4000 | xargs kill -9
 ```
 
 **MongoDB connection failed:**
+
 - Check MongoDB is running: `mongosh`
 - Verify connection string in .env
 - For Atlas: whitelist your IP address
 
 **WhatsApp messages not working:**
+
 - Verify webhook URL is HTTPS (use ngrok for local testing)
 - Check WHATSAPP_VERIFY_TOKEN matches in Meta console
 - Ensure webhook is subscribed to "messages" events

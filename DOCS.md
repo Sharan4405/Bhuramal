@@ -16,11 +16,13 @@ Complete guide for setup, development, troubleshooting, and contributing.
 ### Prerequisites
 
 **Required Software:**
+
 - Node.js v20+ ([nodejs.org](https://nodejs.org))
 - MongoDB ([mongodb.com](https://mongodb.com) or Atlas cloud)
 - Git
 
 **Required Accounts:**
+
 - WhatsApp Business API ([developers.facebook.com](https://developers.facebook.com))
 - Razorpay ([razorpay.com](https://razorpay.com))
 
@@ -79,6 +81,7 @@ STORE_LONGITUDE=77.1234567
 
 **Frontend Environment:**
 Create `client/.env.local`:
+
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:4000
 ```
@@ -170,6 +173,7 @@ npm run dev
 ```
 
 **Access:**
+
 - Frontend: http://localhost:3000
 - Backend: http://localhost:4000
 - Health: http://localhost:4000/health
@@ -203,32 +207,34 @@ client/
 ### Code Style
 
 **JavaScript/TypeScript:**
+
 ```javascript
 // Use ES6+ syntax
-import express from 'express';
+import express from "express";
 
 // Async/await for asynchronous operations
 const data = await Model.find();
 
 // Arrow functions
-const helper = (param) => { };
+const helper = (param) => {};
 
 // Destructuring
 const { name, price } = product;
 ```
 
 **Naming Conventions:**
+
 ```javascript
 // Constants: UPPER_SNAKE_CASE
 const MAX_ITEMS = 100;
 
 // Variables/functions: camelCase
-const userName = 'John';
-function getUser() { }
+const userName = "John";
+function getUser() {}
 
 // Classes/Components: PascalCase
-class ProductService { }
-function ProductCard() { }
+class ProductService {}
+function ProductCard() {}
 ```
 
 ### Testing APIs
@@ -254,6 +260,7 @@ curl http://localhost:4000/api/orders \
 ### Installation Issues
 
 **npm install fails:**
+
 ```bash
 # Clear cache and retry
 rm -rf node_modules package-lock.json
@@ -265,6 +272,7 @@ npm install --legacy-peer-deps
 ```
 
 **Node version mismatch:**
+
 ```bash
 # Check version
 node --version  # Should be v20+
@@ -279,13 +287,14 @@ nvm use 20
 **MongoDB connection failed:**
 
 1. **Check if MongoDB is running:**
+
    ```bash
    # Windows
    sc query MongoDB
-   
+
    # Mac
    brew services list | grep mongodb
-   
+
    # Linux
    sudo systemctl status mongod
    ```
@@ -301,6 +310,7 @@ nvm use 20
    ```
 
 **Authentication failed:**
+
 - Verify username and password in connection string
 - Check database user permissions
 - Ensure correct authentication database
@@ -308,6 +318,7 @@ nvm use 20
 ### Server Issues
 
 **Port already in use:**
+
 ```bash
 # Windows
 netstat -ano | findstr :4000
@@ -321,6 +332,7 @@ PORT=4001 npm run dev
 ```
 
 **Module not found:**
+
 ```bash
 # Reinstall dependencies
 npm install
@@ -330,6 +342,7 @@ npm install module-name
 ```
 
 **Environment variables not loading:**
+
 - Check .env file exists in root
 - Verify `import 'dotenv/config'` in server.js
 - Restart server after changing .env
@@ -338,17 +351,20 @@ npm install module-name
 ### WhatsApp Issues
 
 **Webhook verification fails:**
+
 - Ensure WHATSAPP_VERIFY_TOKEN matches in .env and Meta console
 - Check server is accessible (use ngrok for local)
 - Verify endpoint responds to GET request
 
 **Messages not received:**
+
 - Check webhook subscription in Meta console
 - Verify webhook URL is HTTPS
 - Check server logs for incoming requests
 - Test webhook endpoint manually
 
 **Messages not sent:**
+
 - Verify phone number format: `+[country][number]`
 - Check access token validity (regenerate if expired)
 - Use system user token for permanent access
@@ -357,12 +373,14 @@ npm install module-name
 ### Payment Issues
 
 **Razorpay webhook not working:**
+
 - Verify webhook URL is correct and HTTPS
 - Check webhook secret matches
 - Verify events are selected (payment.captured, payment.failed)
 - Test with Razorpay webhook tester
 
 **Payment link creation fails:**
+
 - Check API keys are correct (test vs live)
 - Verify amount is in paise (multiply by 100)
 - Check Razorpay account is activated
@@ -371,18 +389,21 @@ npm install module-name
 ### Frontend Issues
 
 **Can't connect to backend:**
+
 - Verify NEXT_PUBLIC_API_URL in client/.env.local
 - Check backend is running
 - Verify CORS settings in backend
 - Check browser console for errors
 
 **Styles not loading:**
+
 - Verify Tailwind is installed
 - Check globals.css is imported in layout.tsx
 - Clear Next.js cache: `rm -rf .next`
 - Restart dev server
 
 **Socket.io not connecting:**
+
 - Check Socket.io server is initialized
 - Verify WebSocket support (check firewall/proxy)
 - Check CORS configuration for Socket.io
@@ -391,19 +412,21 @@ npm install module-name
 ### Performance Issues
 
 **Slow queries:**
+
 ```javascript
 // Add database indexes
-productSchema.index({ name: 'text' });
+productSchema.index({ name: "text" });
 orderSchema.index({ status: 1, createdAt: -1 });
 
 // Use projection
-Model.find().select('field1 field2');
+Model.find().select("field1 field2");
 
 // Implement pagination
 Model.find().skip(skip).limit(limit);
 ```
 
 **High memory usage:**
+
 ```bash
 # Increase Node.js memory
 node --max-old-space-size=4096 src/server.js
@@ -454,6 +477,7 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/):
 ```
 
 **Types:**
+
 - `feat`: New feature
 - `fix`: Bug fix
 - `docs`: Documentation
@@ -464,6 +488,7 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/):
 - `chore`: Maintenance
 
 **Examples:**
+
 ```bash
 git commit -m "feat(products): add sorting by price"
 git commit -m "fix(orders): resolve status update issue"
@@ -473,32 +498,34 @@ git commit -m "docs(api): update authentication endpoints"
 ### Code Guidelines
 
 **Backend:**
+
 ```javascript
 // Good
 export const createProduct = async (req, res) => {
   try {
     const { name, price } = req.body;
-    
+
     if (!name || !price) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Name and price required' 
+      return res.status(400).json({
+        success: false,
+        error: "Name and price required",
       });
     }
-    
+
     const product = await Product.create({ name, price });
     return res.status(201).json({ success: true, product });
   } catch (error) {
-    console.error('Create product error:', error);
-    return res.status(500).json({ 
-      success: false, 
-      error: 'Server error' 
+    console.error("Create product error:", error);
+    return res.status(500).json({
+      success: false,
+      error: "Server error",
     });
   }
 };
 ```
 
 **Frontend:**
+
 ```typescript
 // Good - TypeScript component
 interface OrderCardProps {
@@ -508,7 +535,7 @@ interface OrderCardProps {
 
 export default function OrderCard({ order, onUpdate }: OrderCardProps) {
   const [loading, setLoading] = useState(false);
-  
+
   const handleUpdate = async () => {
     setLoading(true);
     try {
@@ -520,7 +547,7 @@ export default function OrderCard({ order, onUpdate }: OrderCardProps) {
       setLoading(false);
     }
   };
-  
+
   return (
     <div className="p-4 border rounded">
       {/* content */}
@@ -532,42 +559,51 @@ export default function OrderCard({ order, onUpdate }: OrderCardProps) {
 ### Pull Request Guidelines
 
 **Before submitting:**
+
 - Update from upstream: `git fetch upstream && git rebase upstream/main`
 - Test all changes
 - Update documentation if needed
 - Follow commit message format
 
 **PR Title:** Use commit format
+
 ```
 feat(orders): add Excel export functionality
 fix(auth): resolve token expiration issue
 ```
 
 **PR Description:**
+
 ```markdown
 ## Description
+
 Brief description of changes
 
 ## Type
+
 - [ ] Bug fix
 - [ ] New feature
 - [ ] Documentation
 
 ## Related Issue
+
 Closes #123
 
 ## Testing
+
 How you tested the changes
 ```
 
 ### Reporting Bugs
 
 **Before reporting:**
+
 - Check existing issues
 - Try latest version
 - Search documentation
 
 **Bug report should include:**
+
 - Clear description
 - Steps to reproduce
 - Expected vs actual behavior
@@ -577,6 +613,7 @@ How you tested the changes
 ### Suggesting Features
 
 **Feature request should include:**
+
 - Problem description
 - Proposed solution
 - Use cases and benefits
@@ -585,12 +622,14 @@ How you tested the changes
 ### Documentation
 
 Update documentation when:
+
 - Adding new features
 - Changing existing functionality
 - Fixing bugs that affect usage
 - Adding configuration options
 
 Keep documentation:
+
 - Clear and concise
 - With code examples
 - Up-to-date with code
@@ -600,16 +639,19 @@ Keep documentation:
 ## Getting Help
 
 **Resources:**
+
 - [README.md](./README.md) - Project overview
 - [API.md](./API.md) - API reference
 - [DEPLOYMENT.md](./DEPLOYMENT.md) - Deployment guide
 
 **Support:**
+
 - GitHub Issues - Report bugs or request features
 - GitHub Discussions - Ask questions
 - Check documentation first
 
 **Debug Logging:**
+
 ```bash
 # Enable verbose logging
 DEBUG=* npm run dev
