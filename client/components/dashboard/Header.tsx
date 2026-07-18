@@ -23,6 +23,7 @@ export function DashboardHeader({ onLogout }: HeaderProps) {
           <Link href="/dashboard/orders" className="text-lg font-semibold text-gray-700 hover:text-[rgb(var(--orange))] transition-colors">
             Orders
           </Link>
+          
         </div>
         <h1 className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-orange-500 bg-clip-text text-transparent">
            Admin Panel

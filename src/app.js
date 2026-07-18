@@ -1,66 +1,75 @@
-import express from 'express';
-import webhookRouter from './routers/webhook.js';
-import paymentRouter from './routers/payment.js';
-import authRouter from './routers/auth.js';
-import conversationRouter from './routers/conversation.js';
-import messageRouter from './routers/message.js';
-import productRouter from './routers/product.js';
-import orderRouter from './routers/order.js';
-import cors from 'cors';
-import helmet from 'helmet';
-import rateLimiter from 'express-rate-limit';
-import {connectDB} from './DB/connection.js';
-import {loadCatalog, refreshCatalog} from './services/catalogService.js';
+import express from "express";
+import webhookRouter from "./routers/webhook.js";
+import paymentRouter from "./routers/payment.js";
+import authRouter from "./routers/auth.js";
+import conversationRouter from "./routers/conversation.js";
+import messageRouter from "./routers/message.js";
+import productRouter from "./routers/product.js";
+import orderRouter from "./routers/order.js";
+import cors from "cors";
+import helmet from "helmet";
+import rateLimiter from "express-rate-limit";
+import { connectDB } from "./DB/connection.js";
+import { loadCatalog, refreshCatalog } from "./services/catalogService.js";
+import userRouter from "./routers/user.js";
 
 const app = express();
 
 // Trust proxy (required for ngrok/proxy environments)
-app.set('trust proxy', 1);
+app.set("trust proxy", 1);
 
 // Capture raw body for webhook signature verification
-app.use('/webhook', express.json({
-  verify: (req, res, buf) => {
-    req.rawBody = buf.toString('utf8');
-  }
-}));
+app.use(
+  "/webhook",
+  express.json({
+    verify: (req, res, buf) => {
+      req.rawBody = buf.toString("utf8");
+    },
+  }),
+);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cors({
-  origin: '*',
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
-}));
+app.use(
+  cors({
+    origin: "*",
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  }),
+);
 app.use(helmet());
-app.use(rateLimiter({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 150 // limit each IP to 150 requests per windowMs
-}));
+app.use(
+  rateLimiter({
+    windowMs: 1 * 60 * 1000, // 1 minute
+    max: 150, // limit each IP to 150 requests per windowMs
+  }),
+);
 
 // Mount routers
-app.use('/webhook', webhookRouter);
-app.use('/payment', paymentRouter);
-app.use('/api/auth', authRouter);
-app.use('/api/conversations', conversationRouter);
-app.use('/api/messages', messageRouter);
-app.use('/api/products', productRouter);
-app.use('/api/orders', orderRouter);
+app.use("/webhook", webhookRouter);
+app.use("/payment", paymentRouter);
+app.use("/api/auth", authRouter);
+app.use("/api/conversations", conversationRouter);
+app.use("/api/messages", messageRouter);
+app.use("/api/products", productRouter);
+app.use("/api/orders", orderRouter);
+app.use("/api/users", userRouter);
 
 await connectDB();
 
 // Load catalog on startup (async now)
-await loadCatalog()
+await loadCatalog();
 
 //Route for testing server status
-app.get('/health', (req, res) => {
-  res.send('alive');
+app.get("/health", (req, res) => {
+  res.send("alive");
 });
 
 // Route to manually refresh catalog after MongoDB updates
-app.post('/refresh-catalog', async (req, res) => {
+app.post("/refresh-catalog", async (req, res) => {
   try {
     await refreshCatalog();
-    res.json({ success: true, message: 'Catalog refreshed successfully' });
+    res.json({ success: true, message: "Catalog refreshed successfully" });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

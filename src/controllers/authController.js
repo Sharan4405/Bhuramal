@@ -35,7 +35,7 @@ export function logout(req, res) {
 export async function setup(req, res) {
   try {
     const count = await Admin.countDocuments();
-    if (count > 0) {
+    if (count > 2) {
       return res.status(400).json({ error: 'Admin already exists' });
     }
     
