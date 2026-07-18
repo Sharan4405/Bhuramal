@@ -16,7 +16,7 @@ export function AdminNav() {
     { href: '/dashboard', label: 'Conversations' },
     { href: '/dashboard/orders', label: 'Orders' },
     { href: '/dashboard/products', label: 'Products' },
-    { href: '/dashboard/clients', label: 'Clients' },
+    { href: '/dashboard/clients', label: 'Customers' },
   ];
 
   return (
