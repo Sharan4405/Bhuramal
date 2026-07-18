@@ -1,0 +1,1287 @@
+import crypto from "crypto";
+import {
+  sendMessage,
+  sendButtonMessage,
+  sendListMessage,
+  sendUrlButton,
+} from "../utils/whatsapp.js";
+import conversation from "../models/conversationStateService.js";
+import * as catalog from "../services/catalogService.js";
+import Order from "../models/Order.js";
+import Message from "../models/Message.js";
+import Conversation from "../models/conversation.model.js";
+import { createPaymentLink } from "../services/paymentService.js";
+import cartService from "../services/cartService.js";
+import { notifyNewMessage } from "../services/socketService.js";
+import { calculatePrice, getPriceBreakdown } from "../utils/priceCalculator.js";
+import User from "../models/User.model.js";
+
+// Main menu configuration
+const MAIN_MENU = {
+  buttons: [
+    { id: "orders", title: "🛒 Order Now" },
+    { id: "view_cart", title: "🛒 View Cart" },
+    { id: "support", title: "💬 Support & Queries" },
+  ],
+  footer: 'Type "menu" anytime to return here',
+};
+
+// Support menu configuration
+const SUPPORT_MENU = {
+  buttons: [
+    { id: "track_order", title: "📦 Track Order" },
+    { id: "view_address", title: "📍 View Address" },
+    { id: "contact_team", title: "👨‍💼 Contact Team" },
+  ],
+};
+
+// Store location/address
+const STORE_ADDRESS =
+  process.env.STORE_ADDRESS ||
+  "Purana Thana, Shop No. SL-2, Opp Pillar No 56, Sodala, Ajmer Rd, Sodhala, Jaipur, Rajasthan 302019";
+const STORE_LAT = process.env.STORE_LATITUDE
+  ? parseFloat(process.env.STORE_LATITUDE)
+  : null;
+const STORE_LNG = process.env.STORE_LONGITUDE
+  ? parseFloat(process.env.STORE_LONGITUDE)
+  : null;
+const STORE_MAPS_QUERY = process.env.STORE_MAPS_QUERY
+  ? process.env.STORE_MAPS_QUERY.trim()
+  : null;
+const STORE_MAPS_LINK = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(STORE_ADDRESS)}`;
+
+// 🔧 Helper to navigate to menu (reusable)
+async function navigateToMenu(from, userName = null) {
+  await conversation.setState(from, "menu");
+  await showMainMenu(from, userName);
+}
+
+// 🔧 Helper to navigate to manual support (reusable)
+async function navigateToSupport(from) {
+  await conversation.setState(from, "support_menu");
+  await sendButtonMessage(
+    from,
+    "💬 *Support & Queries*\n\nHow can we help you today?",
+    SUPPORT_MENU.buttons,
+  );
+}
+
+// 🔧 Helper to send store location (reusable)
+async function sendStoreLocation(from) {
+  const mapsLink = STORE_MAPS_QUERY
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(STORE_MAPS_QUERY)}`
+    : Number.isFinite(STORE_LAT) && Number.isFinite(STORE_LNG)
+      ? `https://www.google.com/maps/search/?api=1&query=${STORE_LAT},${STORE_LNG}`
+      : STORE_MAPS_LINK;
+
+  await sendUrlButton(
+    from,
+    `📍 *Store Address*\n${STORE_ADDRESS}\n\nTap the button below to open the location in Google Maps.`,
+    "View Location",
+    mapsLink,
+    "📍 Location",
+  );
+}
+
+// Helper to send main menu
+async function showMainMenu(from, userName = null) {
+  const text = userName
+    ? `Hello ${userName}! 👋\n\nWelcome to *Bhuramal Bhagirath Prasad* - Your trusted partner for premium dry fruits and nuts! 🌟\n\nWhat can I help you with today?\n\nNeed help? Tap *Support & Queries*.`
+    : "What can I help you with today?\n\nNeed help? Tap *Support & Queries*.";
+
+  await sendButtonMessage(
+    from,
+    text,
+    MAIN_MENU.buttons,
+    "Main Menu",
+    MAIN_MENU.footer,
+  );
+}
+
+// Helper to show order categories
+async function showOrderCategories(from) {
+  const categories = await catalog.getCategories();
+  const sections = [
+    {
+      title: "Order Categories",
+      rows: categories.map((cat, idx) => ({
+        id: `order_cat_${idx}`,
+        title: cat,
+        description: `Order from ${cat}`,
+      })),
+    },
+    {
+      title: "Navigation",
+      rows: [
+        {
+          id: "main_menu",
+          title: "↩️ Back to Main Menu",
+          description: "Return to main menu",
+        },
+      ],
+    },
+  ];
+
+  await sendListMessage(
+    from,
+    "🛒 *Place Your Order*\n\nSelect a category:",
+    sections,
+    "Select Category",
+  );
+}
+
+async function showCategoryItems(from, category, items) {
+  const sections = [
+    {
+      title: category,
+      rows: items.map((item, idx) => ({
+        id: `item_${idx}`,
+        title: item.name.substring(0, 24),
+        description: `${item.weight} ${item.unit} - ₹${item.price}`.substring(
+          0,
+          72,
+        ),
+      })),
+    },
+    {
+      title: "Navigation",
+      rows: [
+        {
+          id: "go_back_categories",
+          title: "↩️ Back to Categories",
+          description: "Choose a different category",
+        },
+      ],
+    },
+  ];
+
+  await sendListMessage(
+    from,
+    `📦 *${category}*\n\nSelect an item:`,
+    sections,
+    "Select Item",
+  );
+}
+
+// 🔧 Helper to display cart with full options (reusable)
+async function showCartWithOptions(from) {
+  const cart = await cartService.getCart(from);
+  const summary = await cartService.getCartSummary(from);
+
+  // Build items list in message text
+  let itemsText = cart.items
+    .map((item, idx) => {
+      const weight =
+        item.unit === "grams"
+          ? `${item.weight}g`
+          : `${item.weight} ${item.unit}`;
+      const qty = item.quantity > 1 ? ` × ${item.quantity}` : "";
+      return `${idx + 1}. *${item.name}*\n   ${weight}${qty} - ₹${item.totalPrice.toFixed(2)}`;
+    })
+    .join("\n\n");
+
+  const sections = [
+    {
+      title: "Actions",
+      rows: [
+        {
+          id: "change_quantity",
+          title: "✏️ Change Quantity",
+          description: "Edit item quantities",
+        },
+        {
+          id: "checkout",
+          title: "💳 Checkout",
+          description: "Proceed to payment",
+        },
+        {
+          id: "orders",
+          title: "➕ Continue Shopping",
+          description: "Add more items",
+        },
+        {
+          id: "clear_cart",
+          title: "🗑️ Clear Cart",
+          description: "Remove all items",
+        },
+        { id: "main_menu", title: "🏠 Main Menu", description: "Back to menu" },
+      ],
+    },
+  ];
+
+  await sendListMessage(
+    from,
+    `🛒 *Your Cart*\n\n${itemsText}\n\n━━━━━━━━━━━━━━━━\n📦 Total Items: ${summary.totalItems}\n💰 *Total Amount: ₹${summary.totalAmount.toFixed(2)}*`,
+    sections,
+    "Select Action",
+  );
+
+  await conversation.setState(from, "view_cart_options");
+}
+
+// Verify webhook for WhatsApp Cloud API
+function verifyWebhook(req, res) {
+  const mode = req.query["hub.mode"];
+  const token = req.query["hub.verify_token"];
+  const challenge = req.query["hub.challenge"];
+
+  if (mode && token) {
+    if (mode === "subscribe" && token === process.env.WHATSAPP_VERIFY_TOKEN) {
+      console.log("Webhook verified");
+      return res.status(200).send(challenge);
+    }
+    return res.sendStatus(403);
+  }
+  res.sendStatus(400);
+}
+
+// Helper to verify webhook signature
+function verifySignature(req) {
+  // ✅ Skip signature verification during load testing
+  if (process.env.LOAD_TEST === "true") {
+    console.log("🧪 Load Test: Signature verification skipped");
+    return true;
+  }
+
+  const signature = req.headers["x-hub-signature-256"];
+  const appSecret = process.env.WHATSAPP_APP_SECRET;
+
+  if (!appSecret) {
+    console.warn(
+      "⚠️ WHATSAPP_APP_SECRET not set - skipping signature verification",
+    );
+    return true;
+  }
+
+  if (!signature) {
+    console.error("❌ Missing X-Hub-Signature-256 header");
+    return false;
+  }
+
+  const rawBody = req.rawBody || JSON.stringify(req.body);
+
+  const expectedSignature =
+    "sha256=" +
+    crypto.createHmac("sha256", appSecret).update(rawBody).digest("hex");
+
+  const isValid = crypto.timingSafeEqual(
+    Buffer.from(signature),
+    Buffer.from(expectedSignature),
+  );
+
+  if (!isValid) {
+    console.error("❌ Invalid webhook signature");
+  }
+
+  return isValid;
+}
+
+// Handle incoming webhook events (messages)
+async function handleIncoming(req, res) {
+  const totalStart = Date.now();
+  try {
+    // Verify webhook signature first
+    if (!verifySignature(req)) {
+      console.warn("⚠️  Invalid webhook signature - ignoring payload");
+      return res.sendStatus(200); // Return 200 to prevent retries
+    }
+
+    const body = req.body;
+
+    // Basic structure check - silently ignore invalid payloads
+    if (!body.entry || !Array.isArray(body.entry)) {
+      console.log("⚠️  Invalid webhook payload structure - ignored");
+      return res.sendStatus(200); // Return 200 to prevent retries
+    }
+
+    // Iterate entries (could be batched)
+    for (const entry of body.entry) {
+      const changes = entry.changes || [];
+      for (const change of changes) {
+        const value = change.value || {};
+
+        // Handle message status updates (sent, delivered, read)
+        const statuses =
+          value.statuses && Array.isArray(value.statuses) ? value.statuses : [];
+        for (const statusUpdate of statuses) {
+          const { id: whatsappMessageId, status, timestamp } = statusUpdate;
+
+          try {
+            // Update message status in database
+            const message = await Message.findOneAndUpdate(
+              { whatsappMessageId },
+              {
+                status,
+                updatedAt: new Date(parseInt(timestamp) * 1000),
+              },
+              { new: true },
+            );
+
+            if (message) {
+              console.log(
+                `✅ Message ${whatsappMessageId} status updated to: ${status}`,
+              );
+
+              // Notify dashboard in real-time
+              notifyNewMessage(message.conversationId.toString(), {
+                _id: message._id.toString(),
+                status,
+                type: "status_update",
+              });
+            }
+          } catch (err) {
+            console.error("Error updating message status:", err.message);
+          }
+        }
+
+        const messages =
+          value.messages && Array.isArray(value.messages) ? value.messages : [];
+
+        for (const message of messages) {
+          const messageId = message.id;
+
+          // Skip if already processed this message ID
+          if (global.processedMessages?.has(messageId)) {
+            continue;
+          }
+          if (!global.processedMessages) global.processedMessages = new Set();
+          global.processedMessages.add(messageId);
+
+          // Keep cache small (last 1000 messages)
+          if (global.processedMessages.size > 1000) {
+            const arr = Array.from(global.processedMessages);
+            global.processedMessages = new Set(arr.slice(-1000));
+          }
+          const from = message.from; // sender phone number id
+          const userName = value.contacts?.[0]?.profile?.name || "there"; // Get user's WhatsApp name
+
+          // Check if user already exists
+          let user = await User.findOne({
+            phoneNumber: from,
+          });
+
+          if (!user) {
+            user = await User.create({
+              phoneNumber: from,
+              customerName: userName,
+            });
+
+            console.log(`✅ New user created: ${userName} (${from})`);
+          } else if (user.customerName !== userName) {
+            user.customerName = userName;
+            await user.save();
+          }
+
+          // Handle different message types
+          let text = "";
+          let displayText = ""; // Human-readable text for saving to dashboard
+
+          if (message.text && message.text.body) {
+            text = message.text.body.trim();
+            displayText = text;
+          } else if (message.interactive) {
+            // Handle button/list responses
+            if (message.interactive.button_reply) {
+              text = message.interactive.button_reply.id; // Use button ID as text
+              displayText = message.interactive.button_reply.title || text; // Save button title
+            } else if (message.interactive.list_reply) {
+              text = message.interactive.list_reply.id; // Use list item ID as text
+              displayText = message.interactive.list_reply.title || text; // Save list item title
+            }
+          }
+
+          if (!text) {
+            await sendMessage(
+              from,
+              "Sorry, I can only process text messages and button selections.",
+            );
+            continue;
+          }
+
+          // 💾 Save incoming message (async, doesn't block reply)
+          (async () => {
+            try {
+              let conv = await Conversation.findOne({ user: from });
+              if (!conv) {
+                conv = await Conversation.create({
+                  user: from,
+                  status: "RESOLVED", // Start as resolved, only set OPEN when user requests support
+                  lastMessageAt: new Date(),
+                  lastMessage: displayText,
+                });
+              } else {
+                // Only update message fields, preserve state
+                await Conversation.updateOne(
+                  { user: from },
+                  {
+                    $set: {
+                      lastMessageAt: new Date(),
+                      lastMessage: displayText,
+                    },
+                  },
+                );
+              }
+
+              // Check if user is in manual mode
+              const currentState = await conversation.getState(from);
+              const isManual = currentState === "manual";
+
+              const savedMessage = await Message.create({
+                conversationId: conv._id,
+                user: from,
+                text: displayText, // Save human-readable text
+                isManualMode: isManual,
+                direction: "IN",
+                timestamp: new Date(),
+                whatsappMessageId: messageId, // Store WhatsApp message ID
+              });
+
+              // Notify dashboard in real-time with actual saved message
+              notifyNewMessage(conv._id.toString(), {
+                _id: savedMessage._id.toString(),
+                conversationId: conv._id,
+                user: from,
+                text: displayText, // Show human-readable text in dashboard
+                direction: "IN",
+                timestamp: savedMessage.timestamp,
+              });
+            } catch (err) {
+              console.error("Error saving incoming message:", err.message);
+            }
+          })();
+
+          const textLower = text.toLowerCase();
+          const stateStart = Date.now();
+
+          const state = await conversation.getState(from);
+
+          console.log(
+            `📝 Message from ${from}: "${text}" | State: ${state || "null"}`,
+          );
+
+          // Global commands: menu and back
+          if (
+            textLower === "menu" ||
+            text === "main_menu" ||
+            textLower === "back" ||
+            text === "back_to_category"
+          ) {
+            await navigateToMenu(from);
+            continue;
+          }
+
+          // Global: switch to manual support from anywhere
+          if (text === "support") {
+            await navigateToSupport(from);
+            continue;
+          }
+
+          // Global: address/location queries from any state (single interactive message)
+          if (
+            /\b(address|location|where\s+are\s+you|store\s+location|shop\s+address|map)\b/i.test(
+              textLower,
+            ) ||
+            text === "view_address"
+          ) {
+            await sendStoreLocation(from);
+            continue;
+          }
+
+          // Handle expired/no state
+          if (!state) {
+            // Check if session expired (had previous state but timed out)
+            const metadata = await conversation.getState(from, true);
+            if (metadata && metadata.expired) {
+              await sendMessage(
+                from,
+                `⏱️ *Session Expired*\n\nYour previous session has expired due to inactivity.\n\nPlease start a new order from the menu below.`,
+              );
+              await navigateToMenu(from);
+            } else {
+              // New user - show welcome with name
+              const greetingStart = Date.now();
+              await navigateToMenu(from, userName);
+            }
+            continue;
+          }
+
+          // Support menu handler
+          if (state === "support_menu") {
+            if (text === "track_order") {
+              await conversation.setState(from, "awaiting_order_id");
+              await sendMessage(
+                from,
+                '📦 *Track Your Order*\n\nPlease enter your Order ID to check the status.\n\nYou can find the Order ID in your payment confirmation message.\n\nType "menu" to return.',
+              );
+            } else if (text === "view_address") {
+              await sendStoreLocation(from);
+            } else if (text === "contact_team") {
+              await conversation.setState(from, "manual");
+
+              // Auto-set conversation status to OPEN for support tracking
+              await Conversation.updateOne(
+                { user: from },
+                { $set: { status: "OPEN" } },
+              );
+
+              await sendMessage(
+                from,
+                "👨‍💼 You're now connected with our support team. We'll assist you shortly.\n\nType \"menu\" anytime to return to the bot.",
+              );
+            } else {
+              await sendMessage(from, "Please use the buttons above.");
+            }
+            continue;
+          }
+
+          // Manual mode: do not auto-respond (menu already handled above)
+          if (state === "manual") {
+            continue;
+          }
+
+          // Only respond to hi/hello in menu state
+          if (state === "menu" && /^hi$|^hello$/i.test(text)) {
+            const sendStart = Date.now();
+            await sendMessage(from, "Hello! 👋 Please use the options above.");
+            continue;
+          }
+
+          // Handle main menu buttons globally (from any state)
+          if (text === "orders") {
+            // If already in ordering flow, ignore (stale button click)
+            if (
+              state === "ordering" ||
+              state === "selecting_item" ||
+              state === "quantity_input"
+            ) {
+              continue;
+            }
+            await showOrderCategories(from);
+            await conversation.setState(from, "ordering");
+            continue;
+          }
+
+          // Handle cart reminder buttons globally (can be clicked from any state)
+          if (text === "view_cart" && state !== "menu") {
+            // If cart reminder button clicked from non-menu state
+            await conversation.setState(from, "menu");
+
+            if (await cartService.isEmpty(from)) {
+              await sendButtonMessage(
+                from,
+                "🛒 Your cart is empty.\n\nStart shopping to add items!",
+                [{ id: "orders", title: "🛒 Start Shopping" }],
+              );
+            } else {
+              await showCartWithOptions(from);
+            }
+            continue;
+          }
+
+          // Handle checkout from reminder (can be clicked from any state)
+          if (text === "checkout" && state !== "view_cart_options") {
+            // Direct checkout from reminder
+            const isEmpty = await cartService.isEmpty(from);
+            if (isEmpty) {
+              await sendButtonMessage(
+                from,
+                "🛒 Your cart is empty.\n\nAdd items first!",
+                [{ id: "orders", title: "🛒 Start Shopping" }],
+              );
+              await conversation.setState(from, "menu");
+            } else {
+              await conversation.setState(from, "address_input");
+              await sendMessage(
+                from,
+                `📍 *Delivery Address Required*\n\nPlease provide your complete delivery address:\n\n*Example:*\nJohn Doe\n123, MG Road\nBangalore - 560001`,
+              );
+            }
+            continue;
+          }
+
+          // Main menu handler
+          if (state === "menu") {
+            if (text === "view_cart") {
+              // Show cart contents
+              if (await cartService.isEmpty(from)) {
+                await sendButtonMessage(
+                  from,
+                  "🛒 Your cart is empty.\n\nStart shopping to add items!",
+                  [{ id: "orders", title: "🛒 Start Shopping" }],
+                );
+              } else {
+                await showCartWithOptions(from);
+              }
+            } else {
+              await sendMessage(from, "Please use the buttons above.");
+            }
+            continue;
+          }
+
+          // View cart options handler
+          if (state === "view_cart_options") {
+            // Handle Change Quantity action
+            if (text === "change_quantity") {
+              const cart = await cartService.getCart(from);
+
+              if (!cart.items || cart.items.length === 0) {
+                await sendButtonMessage(
+                  from,
+                  "🛒 Your cart is empty.\n\nStart shopping to add items!",
+                  [{ id: "orders", title: "🛒 Start Shopping" }],
+                );
+                await conversation.setState(from, "menu");
+                continue;
+              }
+
+              const sections = [
+                {
+                  title: "Select Item to Edit",
+                  rows: cart.items.map((item, idx) => {
+                    const weight =
+                      item.unit === "grams"
+                        ? `${item.weight}g`
+                        : `${item.weight} ${item.unit}`;
+                    const qty = item.quantity > 1 ? ` × ${item.quantity}` : "";
+                    return {
+                      id: `edit_item_${idx}`,
+                      title: `${item.name}`,
+                      description: `${weight}${qty} - ₹${item.totalPrice.toFixed(2)}`,
+                    };
+                  }),
+                },
+                {
+                  title: "Navigation",
+                  rows: [
+                    {
+                      id: "view_cart",
+                      title: "↩️ Back to Cart",
+                      description: "Cancel",
+                    },
+                  ],
+                },
+              ];
+
+              await sendListMessage(
+                from,
+                `✏️ *Change Quantity*\n\nSelect the item you want to edit:`,
+                sections,
+                "Select Item",
+              );
+              await conversation.setState(from, "select_item_to_edit");
+              continue;
+            }
+
+            // Handle Main Menu action
+            if (text === "main_menu") {
+              await showMainMenu(from);
+              await conversation.setState(from, "menu");
+              continue;
+            }
+
+            // Handle orders (continue shopping)
+            if (text === "orders") {
+              await showOrderCategories(from);
+              await conversation.setState(from, "ordering");
+              continue;
+            }
+
+            // Handle checkout
+            if (text === "checkout") {
+              await conversation.setState(from, "address_input");
+              await sendMessage(
+                from,
+                `📍 *Delivery Address Required*\n\nPlease provide your complete delivery address:\n\n*Example:*\nJohn Doe\n123, MG Road\nBangalore - 560001`,
+              );
+              continue;
+            }
+
+            // Handle clear cart
+            if (text === "clear_cart") {
+              await cartService.clearCart(from);
+              await sendButtonMessage(from, "✅ Cart cleared successfully!", [
+                { id: "orders", title: "🛒 Start Shopping" },
+              ]);
+              await conversation.setState(from, "menu");
+              continue;
+            }
+
+            // If unrecognized action
+            await sendMessage(from, "Please use the options above.");
+            continue;
+          }
+
+          // Select item to edit quantity handler
+          if (state === "select_item_to_edit") {
+            // Handle item selection
+            if (text.startsWith("edit_item_")) {
+              const itemIndex = parseInt(text.split("_")[2]);
+              const cart = await cartService.getCart(from);
+              const item = cart.items[itemIndex];
+
+              if (!item) {
+                await sendMessage(from, "❌ Item not found.");
+                continue;
+              }
+
+              // Show quantity options for the selected item
+              const quantityOptions =
+                item.unit === "grams" ? [250, 500, 1000] : [1, 2, 3, 5];
+
+              const sections = [
+                {
+                  title: "Select New Quantity",
+                  rows: quantityOptions.map((qty) => {
+                    // Calculate price based on item's existing unit price
+                    const price =
+                      item.unit === "grams"
+                        ? (item.totalPrice / item.weight) * qty
+                        : item.unitPrice * qty;
+                    const label =
+                      item.unit === "grams" ? `${qty}g` : `${qty} ${item.unit}`;
+                    return {
+                      id: `update_qty_${itemIndex}_${qty}`,
+                      title: label,
+                      description: `₹${price.toFixed(2)}`,
+                    };
+                  }),
+                },
+                {
+                  title: "Navigation",
+                  rows: [
+                    {
+                      id: "view_cart",
+                      title: "↩️ Back to Cart",
+                      description: "Cancel",
+                    },
+                  ],
+                },
+              ];
+
+              await sendListMessage(
+                from,
+                `✏️ *Edit: ${item.name}*\n\nCurrent: ${item.unit === "grams" ? `${item.weight}g` : `${item.quantity} ${item.unit}`}\n\nSelect new quantity:`,
+                sections,
+                "Select Quantity",
+              );
+              await conversation.setState(from, "update_item_quantity", {
+                itemIndex,
+              });
+              continue;
+            }
+
+            // Handle back to cart
+            if (text === "view_cart") {
+              await showCartWithOptions(from);
+              continue;
+            }
+            continue;
+          }
+
+          // Update item quantity handler
+          if (state === "update_item_quantity") {
+            const stateData = await conversation.getState(from, true);
+            const itemIndex = stateData?.metadata?.itemIndex;
+
+            // Handle quantity update
+            if (text.startsWith("update_qty_")) {
+              const parts = text.split("_");
+              const idx = parseInt(parts[2]);
+              const newQty = parseInt(parts[3]);
+
+              const result = await cartService.updateItemQuantity(
+                from,
+                idx,
+                newQty,
+              );
+
+              if (result.success) {
+                await sendMessage(from, "✅ Quantity updated successfully!");
+
+                // Show updated cart
+                await showCartWithOptions(from);
+              } else {
+                await sendMessage(
+                  from,
+                  "❌ Error updating quantity. Please try again.",
+                );
+              }
+              continue;
+            }
+
+            // Handle back to cart
+            if (text === "view_cart") {
+              await showCartWithOptions(from);
+              continue;
+            }
+            continue;
+          }
+
+          // Ordering handler - selecting category
+          if (state === "ordering") {
+            // Parse category from list selection (format: order_cat_0)
+            let selectedCategory = null;
+
+            if (text.startsWith("order_cat_")) {
+              const catIndex = parseInt(text.split("_")[2]);
+              const categories = await catalog.getCategories();
+              selectedCategory = categories[catIndex];
+            } else {
+              // Fallback: direct text input
+              selectedCategory = text.trim();
+            }
+
+            const categoryItems =
+              await catalog.getItemsByCategory(selectedCategory);
+
+            if (categoryItems.length > 0) {
+              await showCategoryItems(from, selectedCategory, categoryItems);
+              await conversation.setState(from, "selecting_item", {
+                selectedCategory,
+              });
+            } else {
+              await sendMessage(
+                from,
+                "Invalid category. Please select from the list above.",
+              );
+            }
+            continue;
+          }
+
+          // Selecting item handler
+          if (state === "selecting_item") {
+            // Handle go back to categories
+            if (text === "go_back_categories") {
+              await showOrderCategories(from);
+              await conversation.setState(from, "ordering");
+              continue;
+            }
+
+            // Get selected category and find item
+            const stateData = await conversation.getState(from, true);
+            const selectedCategory = stateData?.metadata?.selectedCategory;
+
+            if (!selectedCategory) {
+              await sendMessage(from, "Session expired. Please start over.");
+              await navigateToMenu(from);
+              continue;
+            }
+
+            const categoryItems =
+              await catalog.getItemsByCategory(selectedCategory);
+            let selectedItem = null;
+
+            // Parse item from list selection (format: item_0)
+            if (text.startsWith("item_")) {
+              const itemIndex = parseInt(text.split("_")[1]);
+              selectedItem = categoryItems[itemIndex];
+            } else {
+              // Fallback: search by name
+              selectedItem = categoryItems.find(
+                (item) =>
+                  item.name && item.name.toLowerCase() === text.toLowerCase(),
+              );
+            }
+
+            if (selectedItem) {
+              await conversation.setState(from, "quantity_input", {
+                selectedItem: selectedItem,
+                selectedCategory: selectedCategory,
+              });
+
+              // Get price breakdown for display
+              const breakdown = getPriceBreakdown(selectedItem);
+
+              // Calculate prices for each quantity option
+              const price250 = calculatePrice(selectedItem, 250);
+              const price500 = calculatePrice(selectedItem, 500);
+              const price1000 = calculatePrice(selectedItem, 1000);
+
+              const sections = [
+                {
+                  title: "Select Quantity",
+                  rows: [
+                    {
+                      id: "qty_250",
+                      title: "250 gm",
+                      description: `₹${price250.toFixed(2)}`,
+                    },
+                    {
+                      id: "qty_500",
+                      title: "500 gm",
+                      description: `₹${price500.toFixed(2)}`,
+                    },
+                    {
+                      id: "qty_1000",
+                      title: "1 kg",
+                      description: `₹${price1000.toFixed(2)}`,
+                    },
+                  ],
+                },
+                {
+                  title: "Navigation",
+                  rows: [
+                    {
+                      id: "go_back_items",
+                      title: "↩️ Back to Items",
+                      description: "Choose a different item",
+                    },
+                  ],
+                },
+              ];
+
+              await sendListMessage(
+                from,
+                `📦 *${selectedItem.name}*\n\n` +
+                  `📊 Base: ${selectedItem.weight} ${selectedItem.unit} - ₹${selectedItem.price}\n` +
+                  `💰 Price per kg: ₹${breakdown.pricePerKg}\n\n` +
+                  `Please select the quantity you want to order:`,
+                sections,
+                "Select Quantity",
+              );
+            } else {
+              await sendMessage(
+                from,
+                "Invalid item. Please select from the list above.",
+              );
+            }
+            continue;
+          }
+
+          // Quantity input (in grams)
+          if (state === "quantity_input") {
+            // Handle go back to item selection
+            if (text === "go_back_items" || textLower === "back") {
+              const stateData = await conversation.getState(from, true);
+              const selectedCategory = stateData?.metadata?.selectedCategory;
+              if (selectedCategory) {
+                const categoryItems =
+                  await catalog.getItemsByCategory(selectedCategory);
+                await showCategoryItems(from, selectedCategory, categoryItems);
+                await conversation.setState(from, "selecting_item", {
+                  selectedCategory,
+                });
+              } else {
+                await showOrderCategories(from);
+                await conversation.setState(from, "ordering");
+              }
+              continue;
+            }
+
+            // Parse quantity from list selection
+            let gramsRequested = 0;
+            if (text === "qty_250") {
+              gramsRequested = 250;
+            } else if (text === "qty_500") {
+              gramsRequested = 500;
+            } else if (text === "qty_1000") {
+              gramsRequested = 1000;
+            } else {
+              await sendMessage(
+                from,
+                "Please use the dropdown list above to select a quantity option.",
+              );
+              continue;
+            }
+
+            const stateData = await conversation.getState(from, true);
+            const selectedItem = stateData?.metadata?.selectedItem;
+
+            if (!selectedItem) {
+              await sendMessage(from, "❌ Session expired. Please start over.");
+              await navigateToMenu(from);
+              continue;
+            }
+
+            // Calculate price based on selected quantity
+            const totalPrice = calculatePrice(selectedItem, gramsRequested);
+
+            // Add item to cart with calculated price
+            const cartResult = await cartService.addItem(from, {
+              name: selectedItem.name,
+              weight: gramsRequested, // Store requested grams
+              unit: "grams",
+              quantity: 1, // Always 1 since we're dealing with weight
+              price: totalPrice.toFixed(2),
+            });
+
+            if (!cartResult.success) {
+              await sendMessage(
+                from,
+                "❌ Error adding item to cart. Please try again.",
+              );
+              continue;
+            }
+
+            // Show cart summary with options in single message
+            await sendButtonMessage(
+              from,
+              `✅ Added ${gramsRequested}g of ${selectedItem.name} to cart!\n` +
+                `💰 Price: ₹${totalPrice.toFixed(2)}\n\n${await cartService.formatCartSummary(from)}\n\n` +
+                `What would you like to do next?`,
+              [
+                { id: "add_more", title: "Add More Items" },
+                { id: "view_cart", title: "View Cart" },
+                { id: "checkout", title: "Checkout" },
+              ],
+            );
+
+            await conversation.setState(from, "cart_options", {
+              selectedItem: selectedItem,
+              selectedCategory: stateData?.metadata?.selectedCategory,
+            });
+            continue;
+          }
+
+          // Cart options handler
+          if (state === "cart_options") {
+            if (text === "add_more") {
+              await showOrderCategories(from);
+              await conversation.setState(from, "ordering");
+            } else if (text === "checkout") {
+              await conversation.setState(from, "address_input");
+              await sendMessage(
+                from,
+                `📍 *Delivery Address Required*\n\nPlease provide your complete delivery address:\n\n*Example:*\nJohn Doe\n123, MG Road\nBangalore - 560001`,
+              );
+            } else if (text === "view_cart") {
+              // Show full cart with options to edit quantities
+              if (await cartService.isEmpty(from)) {
+                await sendButtonMessage(
+                  from,
+                  "🛒 Your cart is empty.\n\nStart shopping to add items!",
+                  [{ id: "orders", title: "🛒 Start Shopping" }],
+                );
+                await conversation.setState(from, "menu");
+              } else {
+                await showCartWithOptions(from);
+              }
+            } else {
+              await sendMessage(
+                from,
+                `❓ Unrecognized option: "${text}". Please use the buttons to proceed.`,
+              );
+            }
+            continue;
+          }
+
+          // Address input
+          if (state === "address_input") {
+            const fullAddress = text.trim();
+            const addressLines = text.trim().split("\n");
+            const customerName = addressLines[0] || userName || "Customer";
+
+            // Get cart summary
+            const cartSummary = await cartService.getCartSummary(from);
+
+            if (cartSummary.items.length === 0) {
+              await sendMessage(
+                from,
+                "🛒 Your cart is empty. Please add items first.",
+              );
+              await navigateToMenu(from);
+              continue;
+            }
+
+            try {
+              // Generate short order ID
+              const orderId = await Order.generateOrderId();
+
+              // Save order to database with all cart items
+              const newOrder = new Order({
+                orderId: orderId,
+                customerName: customerName,
+                phoneNumber: from,
+                fullAddress: fullAddress,
+                items: cartSummary.items,
+                totalItems: cartSummary.totalItems,
+                totalAmount: cartSummary.totalAmount,
+                status: "pending",
+              });x
+
+              await newOrder.save();
+
+              await User.findOneAndUpdate(
+                { phoneNumber: from },
+                {
+                  $set: {
+                    customerName,
+                    fullAddress,
+                    lastOrderDate: new Date(),
+                  },
+                  $inc: {
+                    totalOrders: 1,
+                    totalSpent: cartSummary.totalAmount,
+                  },
+                  $setOnInsert: {
+                    phoneNumber: from,
+                  },
+                },
+                {
+                  upsert: true,
+                  new: true,
+                },
+              );
+
+              // Create order description for payment
+              const itemsDescription = cartSummary.items
+                .map((item) => `${item.quantity}x ${item.name}`)
+                .join(", ");
+
+              // Create payment link
+              const paymentResult = await createPaymentLink({
+                orderId: newOrder._id.toString(),
+                amount: cartSummary.totalAmount,
+                customerName: customerName,
+                customerPhone: from,
+                description: itemsDescription.substring(0, 100), // Razorpay has 100 char limit
+              });
+
+              if (paymentResult.success) {
+                // Update order with payment link
+                newOrder.paymentLink = paymentResult.paymentLink;
+                newOrder.razorpayOrderId = paymentResult.paymentLinkId;
+                newOrder.paymentStatus = "initiated";
+                await newOrder.save();
+
+                // Format cart items for display
+                let itemsList = "";
+                cartSummary.items.forEach((item, index) => {
+                  itemsList += `${index + 1}. ${item.quantity} x ${item.name} (${item.weight} ${item.unit})\n   ₹${item.totalPrice.toFixed(2)}\n`;
+                });
+
+                // Send payment button with order summary
+                const orderSummary = `📦 *Order Summary*\n\n${itemsList}\n💰 *Total: ₹${cartSummary.totalAmount.toFixed(2)}*\n\n📍 *Delivery Address:*\n${fullAddress}\n\nOrder ID: ${newOrder.orderId}\n\n💳 Complete your payment to confirm the order.\n\nPayment is secure via Razorpay 🔒`;
+
+                await sendUrlButton(
+                  from,
+                  orderSummary,
+                  "Proceed to Payment",
+                  paymentResult.paymentLink,
+                  "💰 Payment Required",
+                );
+
+                // Note: Cart will be cleared after successful payment in payment webhook
+              } else {
+                // Payment link creation failed
+                console.error(
+                  "❌ Payment link creation failed:",
+                  paymentResult.error,
+                );
+
+                await sendButtonMessage(
+                  from,
+                  `❌ Unable to create payment link. Please try again or contact support.\n\nOrder ID: ${newOrder.orderId}`,
+                  [
+                    { id: "orders", title: "🛒 Try Again" },
+                    { id: "support", title: "💬 Contact Support" },
+                  ],
+                  "Payment Error",
+                );
+              }
+            } catch (error) {
+              console.error("❌ Error processing order:", error);
+
+              // Clear cart and state
+              await cartService.clearCart(from);
+              await conversation.clearState(from);
+
+              // Notify user of error
+              await sendButtonMessage(
+                from,
+                `❌ *Error Processing Order*\n\nSorry, there was an error processing your order. Please try again or contact support.\n\nError: ${error.message}`,
+                [
+                  { id: "orders", title: "🛒 Try Again" },
+                  { id: "support", title: "💬 Contact Support" },
+                ],
+                "Error",
+              );
+            }
+            continue;
+          }
+
+          // Track order - awaiting order ID input
+          if (state === "awaiting_order_id") {
+            const orderId = text.trim();
+
+            try {
+              // Fetch order from database using custom orderId field
+              const order = await Order.findOne({ orderId: orderId });
+
+              if (!order) {
+                await sendButtonMessage(
+                  from,
+                  `❌ *Order Not Found*\n\nNo order found with ID: ${orderId}\n\nPlease check your Order ID and try again.`,
+                  [
+                    { id: "track_order", title: "🔍 Try Again" },
+                    { id: "support", title: "💬 Contact Support" },
+                  ],
+                  "Order Not Found",
+                );
+                await conversation.setState(from, "menu");
+                continue;
+              }
+
+              // Status emoji mapping
+              const statusDisplay = {
+                pending: "🛒 Order placed",
+                confirmed: "✅ Payment confirmed",
+                processing: "📦 Preparing",
+                shipped: "🚚 Shipped",
+                delivery: " Out for delivery",
+                delivered: "✨ Delivered",
+                cancelled: "❌ Cancelled",
+              };
+
+              // Build status message with buttons
+              let statusMsg = `📦 Order Status\n\n`;
+              statusMsg += `Order ID: ${order.orderId}\n`;
+              statusMsg += `Status: ${statusDisplay[order.status] || order.status}`;
+
+              // Add custom status message if provided by admin
+              if (order.statusMessage && order.statusMessage.trim()) {
+                statusMsg += `\n\n${order.statusMessage}`;
+              }
+
+              // Send with buttons in one message
+              await sendButtonMessage(from, statusMsg, [
+                { id: "track_order", title: "🔍 Track Another" },
+                { id: "main_menu", title: "🏠 Main Menu" },
+              ]);
+
+              await conversation.setState(from, "menu");
+            } catch (error) {
+              console.error("❌ Error fetching order:", error);
+              await sendButtonMessage(
+                from,
+                `❌ *Error*\n\nSorry, there was an error retrieving your order. Please try again or contact support.`,
+                [
+                  { id: "track_order", title: "🔍 Try Again" },
+                  { id: "support", title: "💬 Contact Support" },
+                ],
+                "Error",
+              );
+              await conversation.setState(from, "menu");
+            }
+            continue;
+          }
+
+          // Support/manual state handled earlier
+
+          // Fallback if no recognized state or trigger
+          await sendMessage(
+            from,
+            "Send 'hi' to start. I can show a menu and help with orders and support.",
+          );
+        }
+      }
+    }
+    // 200 to Facebook so retries stop
+    return res.sendStatus(200);
+  } catch (err) {
+    console.error("Error handling webhook", err);
+    return res.sendStatus(500);
+  }
+}
+
+export { verifyWebhook, handleIncoming };

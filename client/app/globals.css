@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --orange: 255 107 53;
+    --green: 16 185 129;
+  }
+}
+
+@layer utilities {
+  .btn-primary {
+    @apply bg-[rgb(var(--orange))] text-white px-6 py-3 rounded-lg font-medium hover:bg-[rgb(255,90,43)] transition-all hover:-translate-y-0.5;
+  }
+  
+  .btn-success {
+    @apply bg-[rgb(var(--green))] text-white px-4 py-2 rounded-md font-medium hover:bg-green-700 transition-all;
+  }
+  
+  .card {
+    @apply bg-white rounded-xl p-6 shadow-sm;
+  }
+  
+  .input {
+    @apply w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[rgb(var(--orange))] focus:ring-4 focus:ring-[rgb(var(--orange))]/10 transition-all;
+  }
+  
+  .badge-open {
+    @apply bg-[rgb(var(--green))] text-white px-3 py-1 rounded-full text-sm font-medium;
+  }
+  
+  .badge-resolved {
+    @apply bg-gray-300 text-gray-700 px-3 py-1 rounded-full text-sm font-medium;
+  }
+  
+  .message-in {
+    @apply bg-white border border-gray-200 px-4 py-3 rounded-2xl rounded-bl-sm max-w-[70%] self-start;
+  }
+  
+  .message-out {
+    @apply bg-[rgb(var(--orange))] text-white px-4 py-3 rounded-2xl rounded-br-sm max-w-[70%] self-end;
+  }
+}
+
+
