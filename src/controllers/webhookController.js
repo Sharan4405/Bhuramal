@@ -14,7 +14,7 @@ import { createPaymentLink } from "../services/paymentService.js";
 import cartService from "../services/cartService.js";
 import { notifyNewMessage } from "../services/socketService.js";
 import { calculatePrice, getPriceBreakdown } from "../utils/priceCalculator.js";
-
+import User from "../models/User.model.js";
 // Main menu configuration
 const MAIN_MENU = {
   buttons: [
