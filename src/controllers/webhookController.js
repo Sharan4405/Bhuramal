@@ -1099,7 +1099,16 @@ async function handleIncoming(req, res) {
 
               await newOrder.save();
 
-              
+              // Update user's latest address
+              await User.findOneAndUpdate(
+                { phoneNumber: from },
+                {
+                  $set: {
+                    customerName: customerName,
+                    fullAddress: fullAddress,
+                  },
+                },
+              );
 
               // Create order description for payment
               const itemsDescription = cartSummary.items
@@ -1131,20 +1140,20 @@ async function handleIncoming(req, res) {
                 // Send payment button with order summary
                 const orderSummary = `📦 *Order Summary*\n\n${itemsList}\n💰 *Total: ₹${cartSummary.totalAmount.toFixed(2)}*\n\n📍 *Delivery Address:*\n${fullAddress}\n\nOrder ID: ${newOrder.orderId}\n\n💳 Complete your payment to confirm the order.\n\nPayment is secure via Razorpay 🔒`;
 
-                  await sendUrlButton(
-                    from,
-                    orderSummary,
-                    "Proceed to Payment",
-                    paymentResult.paymentLink,
-                    "💰 Payment Required",
-                  );
-                  // reset conversation state
-                  await conversation.setState(from, "menu");
-                  console.log("State changed to menu");
-                  console.log(await conversation.getState(from));
+                await sendUrlButton(
+                  from,
+                  orderSummary,
+                  "Proceed to Payment",
+                  paymentResult.paymentLink,
+                  "💰 Payment Required",
+                );
+                // reset conversation state
+                await conversation.setState(from, "menu");
+                console.log("State changed to menu");
+                console.log(await conversation.getState(from));
 
-                  // Note: Cart will be cleared after successful payment in payment webhook
-                } else {
+                // Note: Cart will be cleared after successful payment in payment webhook
+              } else {
                 // Payment link creation failed
                 console.error(
                   "❌ Payment link creation failed:",
