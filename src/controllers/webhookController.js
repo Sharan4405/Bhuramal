@@ -1068,8 +1068,7 @@ async function handleIncoming(req, res) {
           // Address input
           if (state === "address_input") {
             const fullAddress = text.trim();
-            const addressLines = text.trim().split("\n");
-            const customerName = addressLines[0] || userName || "Customer";
+            const customerName = userName || user.customerName || "Customer";
 
             // Get cart summary
             const cartSummary = await cartService.getCartSummary(from);

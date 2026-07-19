@@ -170,7 +170,10 @@ export default function ClientsPage() {
                           {user.phoneNumber}
                         </td>
 
-                        <td className="px-6 py-4 max-w-xs truncate">
+                        <td
+                          className="px-6 py-4 max-w-xs truncate"
+                          title={user.fullAddress}
+                        >
                           {user.fullAddress || "-"}
                         </td>
 
