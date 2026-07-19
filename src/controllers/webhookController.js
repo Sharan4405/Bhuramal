@@ -1159,6 +1159,8 @@ async function handleIncoming(req, res) {
                   paymentResult.paymentLink,
                   "💰 Payment Required",
                 );
+                // reset conversation state
+                await conversation.setState(from, "menu");
 
                 // Note: Cart will be cleared after successful payment in payment webhook
               } else {
