@@ -1097,7 +1097,7 @@ async function handleIncoming(req, res) {
                 totalItems: cartSummary.totalItems,
                 totalAmount: cartSummary.totalAmount,
                 status: "pending",
-              });x
+              });
 
               await newOrder.save();
 
