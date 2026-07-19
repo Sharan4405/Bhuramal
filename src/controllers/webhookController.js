@@ -1100,27 +1100,7 @@ async function handleIncoming(req, res) {
 
               await newOrder.save();
 
-              await User.findOneAndUpdate(
-                { phoneNumber: from },
-                {
-                  $set: {
-                    customerName,
-                    fullAddress,
-                    lastOrderDate: new Date(),
-                  },
-                  $inc: {
-                    totalOrders: 1,
-                    totalSpent: cartSummary.totalAmount,
-                  },
-                  $setOnInsert: {
-                    phoneNumber: from,
-                  },
-                },
-                {
-                  upsert: true,
-                  new: true,
-                },
-              );
+              
 
               // Create order description for payment
               const itemsDescription = cartSummary.items
