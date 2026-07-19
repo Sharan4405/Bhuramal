@@ -1,5 +1,5 @@
 import Order from "../models/Order.js";
-import User from "../models/User.js";
+import User from "../models/User.model.js";
 import { sendButtonMessage } from "../utils/whatsapp.js";
 import conversation from "../models/conversationStateService.js";
 import cartService from "../services/cartService.js";
