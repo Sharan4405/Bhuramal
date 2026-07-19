@@ -30,7 +30,7 @@ const userSchema = new mongoose.Schema(
     },
 
     totalSpent: {
-      type: Date,
+      type: Number,
       default: 0,
     },
 

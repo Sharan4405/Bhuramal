@@ -179,7 +179,7 @@ export default function ClientsPage() {
                         </td>
 
                         <td className="px-6 py-4 text-center">
-                          ₹{user.totalSpent?.toLocaleString() || 0}
+                          ₹{user.totalSpent?.toFixed(2) || "0.00"}
                         </td>
 
                         <td className="px-6 py-4 text-center">
