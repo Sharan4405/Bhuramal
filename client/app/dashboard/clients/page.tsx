@@ -4,6 +4,8 @@ import { AdminNav } from "@/components/dashboard/AdminNav";
 import { useEffect, useState } from "react";
 import { api, auth } from "@/lib/api";
 import { useRouter } from "next/navigation";
+import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
 
 interface User {
   _id: string;
@@ -83,117 +85,118 @@ export default function ClientsPage() {
 
         {/* search clients cart  */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Client List
-                </h2>
-
-                <p className="text-sm text-gray-500">
-                  Search clients by name or phone number.
-                </p>
-              </div>
-
-              <input
-                type="text"
-                placeholder="Search by name or phone..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full md:w-80 rounded-lg border border-gray-300 px-4 py-2 outline-none focus:ring-2 focus:ring-orange-500"
+          <div className="mb-6 relative">
+            <svg
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 z-10"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
               />
-            </div>
+            </svg>
+
+            <input
+              type="text"
+              placeholder="Search by client name or phone..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[rgb(var(--orange))] focus:ring-4 focus:ring-[rgb(var(--orange))]/10 transition-all"
+            />
           </div>
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <Card className="overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead className="bg-gray-100">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
-                      Name
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Customer
                     </th>
 
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                       Phone
                     </th>
 
-                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                       Address
                     </th>
 
-                    <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600">
-                      Orders
+                    <th className="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Total Orders
                     </th>
 
-                    <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600">
-                      Spent
+                    <th className="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Total Spent
                     </th>
 
-                    <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600">
+                    <th className="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
                       Status
                     </th>
 
-                    <th className="px-6 py-3 text-center text-xs font-semibold uppercase tracking-wider text-gray-600">
+                    <th className="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
                       Joined
                     </th>
                   </tr>
                 </thead>
 
-                <tbody>
+                <tbody className="bg-white divide-y divide-gray-200">
                   {loading ? (
                     <tr>
-                      <td colSpan={7} className="text-center py-8">
+                      <td colSpan={7} className="text-center py-10">
                         Loading clients...
                       </td>
                     </tr>
                   ) : filteredUsers.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={6}
-                        className="text-center py-8 text-gray-500"
+                        colSpan={7}
+                        className="text-center py-10 text-gray-500"
                       >
-                        No matching clients found.
+                        No clients found
                       </td>
                     </tr>
                   ) : (
                     filteredUsers.map((user) => (
                       <tr
                         key={user._id}
-                        className="border-b hover:bg-orange-50 transition-colors"
+                        className="hover:bg-gray-50 transition-colors"
                       >
-                        <td className="px-6 py-4 font-medium text-gray-900">
-                          {user.customerName || "-"}
+                        <td className="px-6 py-4">
+                          <div className="font-medium text-gray-900">
+                            {user.customerName || "-"}
+                          </div>
                         </td>
 
-                        <td className="px-6 py-4 font-mono">
-                          {user.phoneNumber}
+                        <td className="px-6 py-4">
+                          <span className="font-mono text-sm text-gray-700">
+                            {user.phoneNumber}
+                          </span>
                         </td>
 
-                        <td className="px-6 py-4 max-w-sm whitespace-normal break-words">
+                        <td className="px-6 py-4 text-sm text-gray-600 max-w-xs">
                           {user.fullAddress || "-"}
                         </td>
 
-                        <td className="px-6 py-4 text-center">
+                        <td className="px-6 py-4 text-center font-semibold">
                           {user.totalOrders}
                         </td>
 
-                        <td className="px-6 py-4 text-center">
-                          ₹{user.totalSpent?.toFixed(2) || "0.00"}
+                        <td className="px-6 py-4 text-center font-bold text-gray-900">
+                          ₹{user.totalSpent?.toLocaleString() || 0}
                         </td>
 
                         <td className="px-6 py-4 text-center">
-                          <span
-                            className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                              user.isActive
-                                ? "bg-green-100 text-green-700"
-                                : "bg-red-100 text-red-700"
-                            }`}
-                          >
+                          <Badge variant={user.isActive ? "success" : "error"}>
                             {user.isActive ? "Active" : "Inactive"}
-                          </span>
+                          </Badge>
                         </td>
-                        <td className="px-6 py-4 text-center">
+
+                        <td className="px-6 py-4 text-center text-sm text-gray-600">
                           {new Date(user.createdAt).toLocaleDateString("en-IN")}
                         </td>
                       </tr>
@@ -202,7 +205,7 @@ export default function ClientsPage() {
                 </tbody>
               </table>
             </div>
-          </div>
+          </Card>
         </div>
       </div>
     </>
