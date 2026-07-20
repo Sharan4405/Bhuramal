@@ -381,12 +381,17 @@ async function handleIncoming(req, res) {
           } else if (message.interactive) {
             // Handle button/list responses
             if (message.interactive.button_reply) {
-              text = message.interactive.button_reply.id; // Use button ID as text
-              displayText = message.interactive.button_reply.title || text; // Save button title
+              text = message.interactive.button_reply.id;
+              displayText = message.interactive.button_reply.title || text;
             } else if (message.interactive.list_reply) {
-              text = message.interactive.list_reply.id; // Use list item ID as text
-              displayText = message.interactive.list_reply.title || text; // Save list item title
+              text = message.interactive.list_reply.id;
+              displayText = message.interactive.list_reply.title || text;
             }
+          } else if (message.location) {
+            console.log("📍 Location received:", message.location);
+            // Handle current location
+            text = "__LOCATION__";
+            displayText = "📍 Shared Current Location";
           }
 
           if (!text) {
@@ -1041,7 +1046,18 @@ async function handleIncoming(req, res) {
               await conversation.setState(from, "address_input");
               await sendMessage(
                 from,
-                `📍 *Delivery Address Required*\n\nPlease provide your complete delivery address:\n\n*Example:*\nJohn Doe\n123, MG Road\nBangalore - 560001`,
+                `📍 *Delivery Address Required*
+
+Please choose one of the following options:
+
+✅ *Option 1:*
+Type your complete delivery address.
+
+📌 *Option 2:*
+Share your current location using WhatsApp.
+
+To share location:
+Attachment (📎) → Location → Send Current Location`,
               );
             } else if (text === "view_cart") {
               // Show full cart with options to edit quantities
@@ -1066,7 +1082,21 @@ async function handleIncoming(req, res) {
 
           // Address input
           if (state === "address_input") {
-            const fullAddress = text.trim();
+            let fullAddress = "";
+            let latitude = null;
+            let longitude = null;
+
+            if (text === "__LOCATION__") {
+              latitude = message.location.latitude;
+              longitude = message.location.longitude;
+
+              fullAddress =
+                message.location.address ||
+                message.location.name ||
+                "Location Shared";
+            } else {
+              fullAddress = text.trim();
+            }
             const customerName = userName || user.customerName || "Customer";
 
             // Get cart summary
@@ -1091,6 +1121,9 @@ async function handleIncoming(req, res) {
                 customerName: customerName,
                 phoneNumber: from,
                 fullAddress: fullAddress,
+
+                latitude,
+                longitude,
                 items: cartSummary.items,
                 totalItems: cartSummary.totalItems,
                 totalAmount: cartSummary.totalAmount,
@@ -1104,8 +1137,10 @@ async function handleIncoming(req, res) {
                 { phoneNumber: from },
                 {
                   $set: {
-                    customerName: customerName,
-                    fullAddress: fullAddress,
+                    customerName,
+                    fullAddress,
+                    latitude,
+                    longitude,
                   },
                 },
               );
