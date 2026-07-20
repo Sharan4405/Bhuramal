@@ -1122,6 +1122,7 @@ Attachment (📎) → Location → Send Current Location`,
                 phoneNumber: from,
                 fullAddress: fullAddress,
 
+                
                 latitude,
                 longitude,
                 items: cartSummary.items,
