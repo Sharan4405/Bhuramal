@@ -15,6 +15,7 @@ import cartService from "../services/cartService.js";
 import { notifyNewMessage } from "../services/socketService.js";
 import { calculatePrice, getPriceBreakdown } from "../utils/priceCalculator.js";
 import User from "../models/User.model.js";
+import { error } from "console";
 // Main menu configuration
 const MAIN_MENU = {
   buttons: [
@@ -55,6 +56,33 @@ async function navigateToMenu(from, userName = null) {
   await showMainMenu(from, userName);
 }
 
+// helper to check address validation
+
+function validateAddress(address) {
+  const errors = [];
+
+  const value = address.trim();
+
+  // Minimum length
+  if (value.length < 20) {
+    errors.push("Address is too short.");
+  }
+
+  // House / Flat / Plot Number
+  if (!/\d/.test(value)) {
+    errors.push("House / Flat / Plot Number is missing.");
+  }
+
+  // PIN Code
+  if (!/\b\d{6}\b/.test(value)) {
+    errors.push("6-digit PIN Code is missing.");
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors,
+  };
+}
 // 🔧 Helper to navigate to manual support (reusable)
 async function navigateToSupport(from) {
   await conversation.setState(from, "support_menu");
@@ -597,15 +625,32 @@ async function handleIncoming(req, res) {
               await conversation.setState(from, "address_input");
               await sendMessage(
                 from,
-                `📍 Please share your delivery address.
+                `📍 *Delivery Address Required*
 
-You can:
-✍️ Type your complete address
-OR
-📍 Share your current location using WhatsApp.
+Please provide your complete delivery address.
+
+Your address should include:
+
+🏠 House / Flat / Plot Number
+📍 Area / Locality
+🏙️ City
+🗺️ State
+📮 6-digit PIN Code
 
 Example:
-House No. 21, Vaishali Nagar, Jaipur, Rajasthan - 302021`,
+
+House No. 21
+Vaishali Nagar
+Jaipur
+Rajasthan
+302021
+
+OR
+
+📍 Share your current location.
+
+To share location:
+📎 Attachment → Location → Send Current Location`,
               );
             }
             continue;
@@ -703,15 +748,32 @@ House No. 21, Vaishali Nagar, Jaipur, Rajasthan - 302021`,
               await conversation.setState(from, "address_input");
               await sendMessage(
                 from,
-                `📍 Please share your delivery address.
+                `📍 *Delivery Address Required*
 
-You can:
-✍️ Type your complete address
-OR
-📍 Share your current location using WhatsApp.
+Please provide your complete delivery address.
+
+Your address should include:
+
+🏠 House / Flat / Plot Number
+📍 Area / Locality
+🏙️ City
+🗺️ State
+📮 6-digit PIN Code
 
 Example:
-House No. 21, Vaishali Nagar, Jaipur, Rajasthan - 302021`,
+
+House No. 21
+Vaishali Nagar
+Jaipur
+Rajasthan
+302021
+
+OR
+
+📍 Share your current location.
+
+To share location:
+📎 Attachment → Location → Send Current Location`,
               );
               continue;
             }
@@ -1064,16 +1126,30 @@ House No. 21, Vaishali Nagar, Jaipur, Rajasthan - 302021`,
                 from,
                 `📍 *Delivery Address Required*
 
-Please choose one of the following options:
+Please provide your complete delivery address.
 
-✅ *Option 1:*
-Type your complete delivery address.
+Your address should include:
 
-📌 *Option 2:*
-Share your current location using WhatsApp.
+🏠 House / Flat / Plot Number
+📍 Area / Locality
+🏙️ City
+🗺️ State
+📮 6-digit PIN Code
+
+Example:
+
+House No. 21
+Vaishali Nagar
+Jaipur
+Rajasthan
+302021
+
+OR
+
+📍 Share your current location.
 
 To share location:
-Attachment (📎) → Location → Send Current Location`,
+📎 Attachment → Location → Send Current Location`,
               );
             } else if (text === "view_cart") {
               // Show full cart with options to edit quantities
@@ -1112,6 +1188,31 @@ Attachment (📎) → Location → Send Current Location`,
                 "Location Shared";
             } else {
               fullAddress = text.trim();
+
+              const validation = validateAddress(fullAddress);
+
+              if (!validation.valid) {
+                await sendMessage(
+                  from,
+                  `❌ Invalid Delivery Address
+
+                      Please enter your complete delivery address.
+
+                      ${validation.errors.map((error) => `• ${error}`).join("\n")}
+
+                      Example:
+
+                      House No. 21
+                      Vaishali Nagar
+                      Jaipur
+                      Rajasthan
+                      302021
+
+                      Or share your current location.`,
+                );
+
+                continue;
+              }
             }
             const customerName = userName || user.customerName || "Customer";
 
