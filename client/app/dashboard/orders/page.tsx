@@ -638,8 +638,8 @@ export default function OrdersPage() {
                             {selectedOrder.fullAddress}
                           </div>
                           {/* Google Maps Button */}
-                          {selectedOrder.fullAddress === "Location Shared" &&
-                            selectedOrder.latitude &&
+                          {/* Google Maps Button */}
+                          {selectedOrder.latitude &&
                             selectedOrder.longitude && (
                               <div className="mt-4">
                                 <a
