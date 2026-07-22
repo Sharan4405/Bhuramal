@@ -1196,19 +1196,19 @@ To share location:
                   from,
                   `❌ Invalid Delivery Address
 
-                      Please enter your complete delivery address.
+Please enter your complete delivery address.
 
-                      ${validation.errors.map((error) => `• ${error}`).join("\n")}
+${validation.errors.map((error) => `• ${error}`).join("\n")}
 
-                      Example:
+ Example:
 
-                      House No. 21
-                      Vaishali Nagar
-                      Jaipur
-                      Rajasthan
-                      302021
+House No. 21
+Vaishali Nagar
+Jaipur
+Rajasthan
+302021
 
-                      Or share your current location.`,
+Or share your current location.`,
                 );
 
                 continue;
