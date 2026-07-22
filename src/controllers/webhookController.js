@@ -597,18 +597,15 @@ async function handleIncoming(req, res) {
               await conversation.setState(from, "address_input");
               await sendMessage(
                 from,
-                `📍 *Delivery Address Required*
+                `📍 Please share your delivery address.
 
-Please choose one of the following options:
+You can:
+✍️ Type your complete address
+OR
+📍 Share your current location using WhatsApp.
 
-✅ *Option 1:*
-Type your complete delivery address.
-
-📌 *Option 2:*
-Share your current location using WhatsApp.
-
-To share location:
-Attachment (📎) → Location → Send Current Location``📍 *Delivery Address Required*\n\nPlease provide your complete delivery address:\n\n*Example:*\nJohn Doe\n123, MG Road\nBangalore - 560001`,
+Example:
+House No. 21, Vaishali Nagar, Jaipur, Rajasthan - 302021`,
               );
             }
             continue;
@@ -706,7 +703,15 @@ Attachment (📎) → Location → Send Current Location``📍 *Delivery Address
               await conversation.setState(from, "address_input");
               await sendMessage(
                 from,
-                `📍 *Delivery Address Required*\n\nPlease provide your complete delivery address:\n\n*Example:*\nJohn Doe\n123, MG Road\nBangalore - 560001`,
+                `📍 Please share your delivery address.
+
+You can:
+✍️ Type your complete address
+OR
+📍 Share your current location using WhatsApp.
+
+Example:
+House No. 21, Vaishali Nagar, Jaipur, Rajasthan - 302021`,
               );
               continue;
             }
