@@ -402,6 +402,8 @@ async function handleIncoming(req, res) {
           // Handle different message types
           let text = "";
           let displayText = ""; // Human-readable text for saving to dashboard
+          let latitude = null;
+          let longitude = null;
 
           if (message.text && message.text.body) {
             text = message.text.body.trim();
@@ -417,11 +419,18 @@ async function handleIncoming(req, res) {
             }
           } else if (message.location) {
             console.log("📍 Location received:", message.location);
-            // Handle current location
+
+            latitude = message.location.latitude;
+            longitude = message.location.longitude;
+
             text = "__LOCATION__";
             displayText = "📍 Shared Current Location";
-          }
 
+            console.log("📍 User coordinates:", {
+              latitude,
+              longitude,
+            });
+          }
           if (!text) {
             await sendMessage(
               from,
@@ -1175,20 +1184,58 @@ To share location:
           // Address input
           if (state === "address_input") {
             let fullAddress = "";
-            let latitude = null;
-            let longitude = null;
 
+            const customerName = userName || user.customerName || "Customer";
+
+            // User shared location
             if (text === "__LOCATION__") {
-              latitude = message.location.latitude;
-              longitude = message.location.longitude;
+              const existingUser = await User.findOne({
+                phoneNumber: from,
+              });
 
-              fullAddress =
-                message.location.address ||
-                message.location.name ||
-                "Location Shared";
-            } else {
+              // Address check
+              if (!existingUser?.fullAddress) {
+                await sendMessage(
+                  from,
+                  `❌ Please enter your complete delivery address first.
+
+Example:
+
+House No. 21
+Vaishali Nagar
+Jaipur
+Rajasthan
+302021`,
+                );
+
+                continue;
+              }
+
+              // Location check
+              if (!latitude || !longitude) {
+                await sendMessage(
+                  from,
+                  `❌ Location not received.
+
+Please share your current location again 📍`,
+                );
+
+                continue;
+              }
+
+              fullAddress = existingUser.fullAddress;
+
+              console.log("✅ Location received:", {
+                latitude,
+                longitude,
+              });
+            }
+
+            // User typed address
+            else {
               fullAddress = text.trim();
 
+              // Validate address
               const validation = validateAddress(fullAddress);
 
               if (!validation.valid) {
@@ -1200,21 +1247,55 @@ Please enter your complete delivery address.
 
 ${validation.errors.map((error) => `• ${error}`).join("\n")}
 
- Example:
+
+Example:
 
 House No. 21
 Vaishali Nagar
 Jaipur
 Rajasthan
-302021
-
-Or share your current location.`,
+302021`,
                 );
 
                 continue;
               }
+
+              // Save only validated address
+              await User.findOneAndUpdate(
+                {
+                  phoneNumber: from,
+                },
+                {
+                  $set: {
+                    customerName,
+                    fullAddress,
+                  },
+                },
+              );
+
+              await sendMessage(
+                from,
+                `✅ Address verified successfully.
+
+Now please share your current location 📍`,
+              );
+
+              continue;
             }
-            const customerName = userName || user.customerName || "Customer";
+
+            // Final validation before order creation
+            const validation = validateAddress(fullAddress);
+
+            if (!validation.valid) {
+              await sendMessage(
+                from,
+                `❌ Invalid Delivery Address
+
+${validation.errors.map((error) => `• ${error}`).join("\n")}`,
+              );
+
+              continue;
+            }
 
             // Get cart summary
             const cartSummary = await cartService.getCartSummary(from);
@@ -1224,34 +1305,48 @@ Or share your current location.`,
                 from,
                 "🛒 Your cart is empty. Please add items first.",
               );
+
               await navigateToMenu(from);
+
               continue;
             }
 
             try {
-              // Generate short order ID
+              // Generate order ID
               const orderId = await Order.generateOrderId();
 
-              // Save order to database with all cart items
+              // Create order
               const newOrder = new Order({
-                orderId: orderId,
-                customerName: customerName,
-                phoneNumber: from,
-                fullAddress: fullAddress,
+                orderId,
 
+                customerName,
+
+                phoneNumber: from,
+
+                fullAddress,
+
+                // Location details
                 latitude,
+
                 longitude,
+
                 items: cartSummary.items,
+
                 totalItems: cartSummary.totalItems,
+
                 totalAmount: cartSummary.totalAmount,
+
                 status: "pending",
               });
 
               await newOrder.save();
 
-              // Update user's latest address
+              // Update user final data
               await User.findOneAndUpdate(
-                { phoneNumber: from },
+                {
+                  phoneNumber: from,
+                },
+
                 {
                   $set: {
                     customerName,
