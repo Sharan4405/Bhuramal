@@ -877,26 +877,32 @@ To share location:
             // Handle quantity update
             if (text.startsWith("update_qty_")) {
               const parts = text.split("_");
-              const idx = parseInt(parts[2]);
-              const newQty = parseInt(parts[3]);
 
-              const result = await cartService.updateItemQuantity(
+              const idx = parseInt(parts[2]);
+              const packetSize = parseInt(parts[3]);
+
+              // Save selected packet size
+              await conversation.setState(from, "edit_packet_quantity", {
+                itemIndex: idx,
+                packetSize,
+              });
+
+              // Ask for packet count
+              await sendMessage(
                 from,
-                idx,
-                newQty,
+                `📦 You selected *${packetSize}g*.
+
+How many packets would you like?
+
+Reply with only a number.
+
+Examples:
+1
+2
+5
+10`,
               );
 
-              if (result.success) {
-                await sendMessage(from, "✅ Quantity updated successfully!");
-
-                // Show updated cart
-                await showCartWithOptions(from);
-              } else {
-                await sendMessage(
-                  from,
-                  "❌ Error updating quantity. Please try again.",
-                );
-              }
               continue;
             }
 
@@ -908,6 +914,38 @@ To share location:
             continue;
           }
 
+          // Edit packet quantity
+          if (state === "edit_packet_quantity") {
+            const packets = parseInt(text);
+
+            if (isNaN(packets) || packets <= 0) {
+              await sendMessage(
+                from,
+                "❌ Please enter a valid number.\n\nExample:\n1\n2\n5\n10",
+              );
+              continue;
+            }
+
+            const stateData = await conversation.getState(from, true);
+
+            const { itemIndex, packetSize } = stateData.metadata;
+
+            const result = await cartService.updateItemQuantity(
+              from,
+              itemIndex,
+              packetSize,
+              packets,
+            );
+
+            if (result.success) {
+              await sendMessage(from, "✅ Cart updated successfully!");
+              await showCartWithOptions(from);
+            } else {
+              await sendMessage(from, "❌ Error updating cart.");
+            }
+
+            continue;
+          }
           // Ordering handler - selecting category
           if (state === "ordering") {
             // Parse category from list selection (format: order_cat_0)

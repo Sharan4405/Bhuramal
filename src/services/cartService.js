@@ -159,7 +159,7 @@ class CartService {
   /**
    * Update quantity/weight of specific item in cart
    */
-  async updateItemQuantity(userId, itemIndex, newWeight) {
+  async updateItemQuantity(userId, itemIndex, packetSize, packets) {
     try {
       const cart = await Cart.findOne({ userId });
       if (!cart || !cart.items[itemIndex]) {
@@ -170,13 +170,12 @@ class CartService {
 
       // For gram-based items, update weight and recalculate price
       if (item.unit === "grams") {
-        const pricePerGram = item.totalPrice / item.weight;
-        item.weight = newWeight;
-        item.totalPrice = Math.round(pricePerGram * newWeight * 100) / 100;
+        item.weight = packetSize;
+        item.quantity = packets;
+        item.totalPrice = Math.round(item.unitPrice * packets * 100) / 100;
       } else {
-        // For non-gram items, update quantity
-        item.quantity = newWeight;
-        item.totalPrice = Math.round(item.unitPrice * newWeight * 100) / 100;
+        item.quantity = packetSize;
+        item.totalPrice = Math.round(item.unitPrice * packetSize * 100) / 100;
       }
 
       // Mark the items array as modified (required for Mongoose subdocuments)
