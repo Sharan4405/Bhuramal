@@ -1087,29 +1087,81 @@ To share location:
             // Calculate price based on selected quantity
             const totalPrice = calculatePrice(selectedItem, gramsRequested);
 
-            // Add item to cart with calculated price
-            const cartResult = await cartService.addItem(from, {
-              name: selectedItem.name,
-              weight: gramsRequested, // Store requested grams
-              unit: "grams",
-              quantity: 1, // Always 1 since we're dealing with weight
-              price: totalPrice.toFixed(2),
+            // Save selected packet size
+            await conversation.setState(from, "packet_quantity", {
+              selectedItem,
+              selectedCategory: stateData?.metadata?.selectedCategory,
+              gramsRequested,
+              unitPrice: totalPrice,
             });
 
-            if (!cartResult.success) {
+            // Ask customer for packet count
+            await sendMessage(
+              from,
+              `📦 You selected *${gramsRequested} gm*.
+
+How many packets would you like?
+
+Reply with only a number.
+
+Examples:
+1
+2
+5
+10`,
+            );
+
+            continue;
+          }
+
+          // packet input
+
+          if (state === "packet_quantity") {
+            const packets = parseInt(text);
+
+            if (isNaN(packets) || packets <= 0) {
               await sendMessage(
                 from,
-                "❌ Error adding item to cart. Please try again.",
+                "❌ Please enter a valid number.\n\nExample:\n1\n2\n5\n10",
               );
               continue;
             }
 
-            // Show cart summary with options in single message
+            const stateData = await conversation.getState(from, true);
+            if (!stateData?.metadata?.selectedItem) {
+              await sendMessage(from, "❌ Session expired. Please start over.");
+              await navigateToMenu(from);
+              continue;
+            }
+            const {
+              selectedItem,
+              gramsRequested,
+              unitPrice,
+              selectedCategory,
+            } = stateData.metadata;
+
+            const cartResult = await cartService.addItem(from, {
+              name: selectedItem.name,
+              weight: gramsRequested,
+              unit: "grams",
+              quantity: packets,
+              price: unitPrice.toFixed(2),
+            });
+
+            if (!cartResult.success) {
+              await sendMessage(from, "❌ Error adding item to cart.");
+              continue;
+            }
+
             await sendButtonMessage(
               from,
-              `✅ Added ${gramsRequested}g of ${selectedItem.name} to cart!\n` +
-                `💰 Price: ₹${totalPrice.toFixed(2)}\n\n${await cartService.formatCartSummary(from)}\n\n` +
-                `What would you like to do next?`,
+              `✅ Added ${packets} × ${gramsRequested}gm of ${selectedItem.name} to cart!
+
+💰 Total: ₹${(unitPrice * packets).toFixed(2)}
+
+${await cartService.formatCartSummary(from)}
+
+What would you like to do next?`,
               [
                 { id: "add_more", title: "Add More Items" },
                 { id: "view_cart", title: "View Cart" },
@@ -1118,9 +1170,10 @@ To share location:
             );
 
             await conversation.setState(from, "cart_options", {
-              selectedItem: selectedItem,
-              selectedCategory: stateData?.metadata?.selectedCategory,
+              selectedItem,
+              selectedCategory,
             });
+
             continue;
           }
 
@@ -1359,7 +1412,7 @@ ${validation.errors.map((error) => `• ${error}`).join("\n")}`,
 
               // Create order description for payment
               const itemsDescription = cartSummary.items
-                .map((item) => `${item.quantity}x ${item.name}`)
+                .map((item) => `${item.quantity}x ${item.weight}g ${item.name}`)
                 .join(", ");
 
               // Create payment link
