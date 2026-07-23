@@ -652,14 +652,7 @@ House No. 21
 Vaishali Nagar
 Jaipur
 Rajasthan
-302021
-
-OR
-
-📍 Share your current location.
-
-To share location:
-📎 Attachment → Location → Send Current Location`,
+302021`,
               );
             }
             continue;
@@ -775,14 +768,7 @@ House No. 21
 Vaishali Nagar
 Jaipur
 Rajasthan
-302021
-
-OR
-
-📍 Share your current location.
-
-To share location:
-📎 Attachment → Location → Send Current Location`,
+302021`,
               );
               continue;
             }
@@ -1242,14 +1228,7 @@ House No. 21
 Vaishali Nagar
 Jaipur
 Rajasthan
-302021
-
-OR
-
-📍 Share your current location.
-
-To share location:
-📎 Attachment → Location → Send Current Location`,
+302021`,
               );
             } else if (text === "view_cart") {
               // Show full cart with options to edit quantities
@@ -1368,7 +1347,9 @@ Rajasthan
                 from,
                 `✅ Address verified successfully.
 
-Now please share your current location 📍`,
+Now please share your current location 📍
+To share location:
+📎 Attachment → Location → Send Current Location`,
               );
 
               continue;
