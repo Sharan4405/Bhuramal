@@ -971,7 +971,7 @@ Examples:
             if (text.startsWith("order_cat_")) {
               const catIndex = parseInt(text.split("_")[2]);
               const categories = await catalog.getCategories();
-              selectedCategory = categories[catIndex];
+              selectedCategory = categories[catIndex].name;
             } else {
               // Fallback: direct text input
               selectedCategory = text.trim();
@@ -1017,12 +1017,13 @@ Examples:
               await catalog.getItemsByCategory(selectedCategory);
             let selectedItem = null;
 
-            // Parse item from list selection (format: item_0)
             if (text.startsWith("item_")) {
-              const itemIndex = parseInt(text.split("_")[1]);
-              selectedItem = categoryItems[itemIndex];
+              const itemId = text.replace("item_", "");
+
+              selectedItem = categoryItems.find(
+                (item) => item._id.toString() === itemId,
+              );
             } else {
-              // Fallback: search by name
               selectedItem = categoryItems.find(
                 (item) =>
                   item.name && item.name.toLowerCase() === text.toLowerCase(),
