@@ -188,47 +188,22 @@ async function showOrderCategories(from, page = 0) {
   );
 }
 
-async function showCategoryItems(from, category, items, page = 0) {
-  const start = page * PAGE_SIZE;
-  const end = start + PAGE_SIZE;
-
-  const currentItems = items.slice(start, end);
-
-  const hasNext = end < items.length;
-  const hasPrev = page > 0;
-
+async function showCategoryItems(from, category, items) {
   const sections = [
     {
       title: category,
-      rows: currentItems.map((item, index) => ({
-        id: `item_${item._id}`,
-        title: `Product ${index + 1}`,
-        description: "Test",
+      rows: items.map((item, idx) => ({
+        id: `item_${idx}`,
+        title: item.name.substring(0, 24),
+        description: `${item.weight} ${item.unit} - ₹${item.price}`.substring(
+          0,
+          72,
+        ),
       })),
     },
     {
       title: "Navigation",
       rows: [
-        ...(hasPrev
-          ? [
-              {
-                id: `item_prev_${page - 1}`,
-                title: "⬅ Previous Page",
-                description: "View previous products",
-              },
-            ]
-          : []),
-
-        ...(hasNext
-          ? [
-              {
-                id: `item_next_${page + 1}`,
-                title: "➡ Next Page",
-                description: "View more products",
-              },
-            ]
-          : []),
-
         {
           id: "go_back_categories",
           title: "↩️ Back to Categories",
@@ -990,26 +965,13 @@ Examples:
           }
           // Ordering handler - selecting category
           if (state === "ordering") {
-            // Next Page
-            if (text.startsWith("category_next_")) {
-              const page = Number(text.replace("category_next_", ""));
-              await showOrderCategories(from, page);
-              continue;
-            }
-
-            // Previous Page
-            if (text.startsWith("category_prev_")) {
-              const page = Number(text.replace("category_prev_", ""));
-              await showOrderCategories(from, page);
-              continue;
-            }
-
+            // Parse category from list selection (format: order_cat_0)
             let selectedCategory = null;
 
             if (text.startsWith("order_cat_")) {
-              selectedCategory = decodeURIComponent(
-                text.replace("order_cat_", ""),
-              );
+              const catIndex = parseInt(text.split("_")[2]);
+              const categories = await catalog.getCategories();
+              selectedCategory = categories[catIndex];
             } else {
               // Fallback: direct text input
               selectedCategory = text.trim();
@@ -1020,17 +982,15 @@ Examples:
 
             if (categoryItems.length > 0) {
               await showCategoryItems(from, selectedCategory, categoryItems);
-
               await conversation.setState(from, "selecting_item", {
                 selectedCategory,
               });
             } else {
               await sendMessage(
                 from,
-                "❌ Invalid category. Please select a valid category.",
+                "Invalid category. Please select from the list above.",
               );
             }
-
             continue;
           }
 
@@ -1042,6 +1002,8 @@ Examples:
               await conversation.setState(from, "ordering");
               continue;
             }
+
+            // Get selected category and find item
             const stateData = await conversation.getState(from, true);
             const selectedCategory = stateData?.metadata?.selectedCategory;
 
@@ -1053,41 +1015,12 @@ Examples:
 
             const categoryItems =
               await catalog.getItemsByCategory(selectedCategory);
-            // Next Page
-            if (text.startsWith("item_next_")) {
-              const page = Number(text.replace("item_next_", ""));
-
-              await showCategoryItems(
-                from,
-                selectedCategory,
-                categoryItems,
-                page,
-              );
-              continue;
-            }
-
-            // Previous Page
-            if (text.startsWith("item_prev_")) {
-              const page = Number(text.replace("item_prev_", ""));
-
-              await showCategoryItems(
-                from,
-                selectedCategory,
-                categoryItems,
-                page,
-              );
-              continue;
-            }
-
             let selectedItem = null;
 
-            // Parse item from list selection
+            // Parse item from list selection (format: item_0)
             if (text.startsWith("item_")) {
-              const itemId = text.replace("item_", "");
-
-              selectedItem = categoryItems.find(
-                (item) => item._id.toString() === itemId,
-              );
+              const itemIndex = parseInt(text.split("_")[1]);
+              selectedItem = categoryItems[itemIndex];
             } else {
               // Fallback: search by name
               selectedItem = categoryItems.find(
@@ -1098,8 +1031,8 @@ Examples:
 
             if (selectedItem) {
               await conversation.setState(from, "quantity_input", {
-                selectedItem,
-                selectedCategory,
+                selectedItem: selectedItem,
+                selectedCategory: selectedCategory,
               });
 
               // Get price breakdown for display
@@ -1155,7 +1088,7 @@ Examples:
             } else {
               await sendMessage(
                 from,
-                "❌ Invalid item selected. Please choose an item from the list.",
+                "Invalid item. Please select from the list above.",
               );
             }
             continue;
