@@ -980,8 +980,14 @@ Examples:
             const categoryItems =
               await catalog.getItemsByCategory(selectedCategory);
 
+            await sendMessage(
+              from,
+              `DEBUG\nCategory: ${selectedCategory}\nItems: ${categoryItems.length}`,
+            );
+
             if (categoryItems.length > 0) {
               await showCategoryItems(from, selectedCategory, categoryItems);
+
               await conversation.setState(from, "selecting_item", {
                 selectedCategory,
               });
