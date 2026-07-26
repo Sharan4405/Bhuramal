@@ -188,12 +188,20 @@ async function showOrderCategories(from, page = 0) {
   );
 }
 
-async function showCategoryItems(from, category, items) {
+async function showCategoryItems(from, category, items, page = 0) {
+  const start = page * PAGE_SIZE;
+  const end = start + PAGE_SIZE;
+
+  const currentItems = items.slice(start, end);
+
+  const hasNext = end < items.length;
+  const hasPrev = page > 0;
+
   const sections = [
     {
       title: category,
-      rows: items.map((item, idx) => ({
-        id: `item_${idx}`,
+      rows: currentItems.map((item) => ({
+        id: `item_${item._id}`,
         title: item.name.substring(0, 24),
         description: `${item.weight} ${item.unit} - ₹${item.price}`.substring(
           0,
@@ -204,6 +212,26 @@ async function showCategoryItems(from, category, items) {
     {
       title: "Navigation",
       rows: [
+        ...(hasPrev
+          ? [
+              {
+                id: `item_prev_${page - 1}`,
+                title: "⬅ Previous Page",
+                description: "View previous products",
+              },
+            ]
+          : []),
+
+        ...(hasNext
+          ? [
+              {
+                id: `item_next_${page + 1}`,
+                title: "➡ Next Page",
+                description: "View more products",
+              },
+            ]
+          : []),
+
         {
           id: "go_back_categories",
           title: "↩️ Back to Categories",
@@ -1017,8 +1045,6 @@ Examples:
               await conversation.setState(from, "ordering");
               continue;
             }
-
-            // Get selected category and find item
             const stateData = await conversation.getState(from, true);
             const selectedCategory = stateData?.metadata?.selectedCategory;
 
@@ -1030,12 +1056,41 @@ Examples:
 
             const categoryItems =
               await catalog.getItemsByCategory(selectedCategory);
+            // Next Page
+            if (text.startsWith("item_next_")) {
+              const page = Number(text.replace("item_next_", ""));
+
+              await showCategoryItems(
+                from,
+                selectedCategory,
+                categoryItems,
+                page,
+              );
+              continue;
+            }
+
+            // Previous Page
+            if (text.startsWith("item_prev_")) {
+              const page = Number(text.replace("item_prev_", ""));
+
+              await showCategoryItems(
+                from,
+                selectedCategory,
+                categoryItems,
+                page,
+              );
+              continue;
+            }
+
             let selectedItem = null;
 
-            // Parse item from list selection (format: item_0)
+            // Parse item from list selection
             if (text.startsWith("item_")) {
-              const itemIndex = parseInt(text.split("_")[1]);
-              selectedItem = categoryItems[itemIndex];
+              const itemId = text.replace("item_", "");
+
+              selectedItem = categoryItems.find(
+                (item) => item._id.toString() === itemId,
+              );
             } else {
               // Fallback: search by name
               selectedItem = categoryItems.find(
@@ -1046,8 +1101,8 @@ Examples:
 
             if (selectedItem) {
               await conversation.setState(from, "quantity_input", {
-                selectedItem: selectedItem,
-                selectedCategory: selectedCategory,
+                selectedItem,
+                selectedCategory,
               });
 
               // Get price breakdown for display
@@ -1103,7 +1158,7 @@ Examples:
             } else {
               await sendMessage(
                 from,
-                "Invalid item. Please select from the list above.",
+                "❌ Invalid item selected. Please choose an item from the list.",
               );
             }
             continue;
