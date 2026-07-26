@@ -200,13 +200,10 @@ async function showCategoryItems(from, category, items, page = 0) {
   const sections = [
     {
       title: category,
-      rows: currentItems.map((item) => ({
+      rows: currentItems.map((item, index) => ({
         id: `item_${item._id}`,
-        title: item.name.substring(0, 24),
-        description: `${item.weight} ${item.unit} - ₹${item.price}`.substring(
-          0,
-          72,
-        ),
+        title: `Product ${index + 1}`,
+        description: "Test",
       })),
     },
     {
