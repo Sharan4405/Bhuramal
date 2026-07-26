@@ -16,6 +16,9 @@ import { notifyNewMessage } from "../services/socketService.js";
 import { calculatePrice, getPriceBreakdown } from "../utils/priceCalculator.js";
 import User from "../models/User.model.js";
 import { error } from "console";
+
+const PAGE_SIZE = 7;
+
 // Main menu configuration
 const MAIN_MENU = {
   buttons: [
@@ -126,13 +129,21 @@ async function showMainMenu(from, userName = null) {
 }
 
 // Helper to show order categories
-async function showOrderCategories(from) {
+async function showOrderCategories(from, page = 0) {
   const categories = await catalog.getCategories();
+  const start = page * PAGE_SIZE;
+  const end = start + PAGE_SIZE;
+
+  const currentCategories = categories.slice(start, end);
+
+  const hasNext = end < categories.length;
+  const hasPrev = page > 0;
+
   const sections = [
     {
       title: "Order Categories",
-      rows: categories.map((cat, idx) => ({
-        id: `order_cat_${idx}`,
+      rows: currentCategories.map((cat) => ({
+        id: `order_cat_${encodeURIComponent(cat)}`,
         title: cat,
         description: `Order from ${cat}`,
       })),
@@ -140,6 +151,26 @@ async function showOrderCategories(from) {
     {
       title: "Navigation",
       rows: [
+        ...(hasPrev
+          ? [
+              {
+                id: `category_prev_${page - 1}`,
+                title: "⬅ Previous Page",
+                description: "View previous categories",
+              },
+            ]
+          : []),
+
+        ...(hasNext
+          ? [
+              {
+                id: `category_next_${page + 1}`,
+                title: "➡ Next Page",
+                description: "View more categories",
+              },
+            ]
+          : []),
+
         {
           id: "main_menu",
           title: "↩️ Back to Main Menu",
@@ -934,13 +965,26 @@ Examples:
           }
           // Ordering handler - selecting category
           if (state === "ordering") {
-            // Parse category from list selection (format: order_cat_0)
+            // Next Page
+            if (text.startsWith("category_next_")) {
+              const page = Number(text.replace("category_next_", ""));
+              await showOrderCategories(from, page);
+              continue;
+            }
+
+            // Previous Page
+            if (text.startsWith("category_prev_")) {
+              const page = Number(text.replace("category_prev_", ""));
+              await showOrderCategories(from, page);
+              continue;
+            }
+
             let selectedCategory = null;
 
             if (text.startsWith("order_cat_")) {
-              const catIndex = parseInt(text.split("_")[2]);
-              const categories = await catalog.getCategories();
-              selectedCategory = categories[catIndex];
+              selectedCategory = decodeURIComponent(
+                text.replace("order_cat_", ""),
+              );
             } else {
               // Fallback: direct text input
               selectedCategory = text.trim();
@@ -951,15 +995,17 @@ Examples:
 
             if (categoryItems.length > 0) {
               await showCategoryItems(from, selectedCategory, categoryItems);
+
               await conversation.setState(from, "selecting_item", {
                 selectedCategory,
               });
             } else {
               await sendMessage(
                 from,
-                "Invalid category. Please select from the list above.",
+                "❌ Invalid category. Please select a valid category.",
               );
             }
+
             continue;
           }
 
