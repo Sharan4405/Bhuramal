@@ -16,9 +16,6 @@ import { notifyNewMessage } from "../services/socketService.js";
 import { calculatePrice, getPriceBreakdown } from "../utils/priceCalculator.js";
 import User from "../models/User.model.js";
 import { error } from "console";
-
-const PAGE_SIZE = 7;
-
 // Main menu configuration
 const MAIN_MENU = {
   buttons: [
@@ -129,21 +126,13 @@ async function showMainMenu(from, userName = null) {
 }
 
 // Helper to show order categories
-async function showOrderCategories(from, page = 0) {
+async function showOrderCategories(from) {
   const categories = await catalog.getCategories();
-  const start = page * PAGE_SIZE;
-  const end = start + PAGE_SIZE;
-
-  const currentCategories = categories.slice(start, end);
-
-  const hasNext = end < categories.length;
-  const hasPrev = page > 0;
-
   const sections = [
     {
       title: "Order Categories",
-      rows: currentCategories.map((cat) => ({
-        id: `order_cat_${encodeURIComponent(cat)}`,
+      rows: categories.map((cat, idx) => ({
+        id: `order_cat_${idx}`,
         title: cat,
         description: `Order from ${cat}`,
       })),
@@ -151,26 +140,6 @@ async function showOrderCategories(from, page = 0) {
     {
       title: "Navigation",
       rows: [
-        ...(hasPrev
-          ? [
-              {
-                id: `category_prev_${page - 1}`,
-                title: "⬅ Previous Page",
-                description: "View previous categories",
-              },
-            ]
-          : []),
-
-        ...(hasNext
-          ? [
-              {
-                id: `category_next_${page + 1}`,
-                title: "➡ Next Page",
-                description: "View more categories",
-              },
-            ]
-          : []),
-
         {
           id: "main_menu",
           title: "↩️ Back to Main Menu",
@@ -971,7 +940,7 @@ Examples:
             if (text.startsWith("order_cat_")) {
               const catIndex = parseInt(text.split("_")[2]);
               const categories = await catalog.getCategories();
-              selectedCategory = categories[catIndex].name;
+              selectedCategory = categories[catIndex];
             } else {
               // Fallback: direct text input
               selectedCategory = text.trim();
@@ -980,14 +949,8 @@ Examples:
             const categoryItems =
               await catalog.getItemsByCategory(selectedCategory);
 
-            await sendMessage(
-              from,
-              `DEBUG\nCategory: ${selectedCategory}\nItems: ${categoryItems.length}`,
-            );
-
             if (categoryItems.length > 0) {
               await showCategoryItems(from, selectedCategory, categoryItems);
-
               await conversation.setState(from, "selecting_item", {
                 selectedCategory,
               });
@@ -1023,13 +986,12 @@ Examples:
               await catalog.getItemsByCategory(selectedCategory);
             let selectedItem = null;
 
+            // Parse item from list selection (format: item_0)
             if (text.startsWith("item_")) {
-              const itemId = text.replace("item_", "");
-
-              selectedItem = categoryItems.find(
-                (item) => item._id.toString() === itemId,
-              );
+              const itemIndex = parseInt(text.split("_")[1]);
+              selectedItem = categoryItems[itemIndex];
             } else {
+              // Fallback: search by name
               selectedItem = categoryItems.find(
                 (item) =>
                   item.name && item.name.toLowerCase() === text.toLowerCase(),
