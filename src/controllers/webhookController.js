@@ -157,28 +157,57 @@ async function showOrderCategories(from) {
   );
 }
 
-async function showCategoryItems(from, category, items) {
+const PAGE_SIZE = 8;
+
+async function showCategoryItems(from, category, items, page = 0) {
+  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+
+  const start = page * PAGE_SIZE;
+  const end = start + PAGE_SIZE;
+
+  const currentItems = items.slice(start, end);
+
+  const itemRows = currentItems.map((item, idx) => ({
+    id: `item_${start + idx}`, // original index preserve
+    title: item.name.substring(0, 24),
+    description: `${item.weight} ${item.unit} - ₹${item.price}`.substring(
+      0,
+      72,
+    ),
+  }));
+
+  const navigationRows = [];
+
+  if (page > 0) {
+    navigationRows.push({
+      id: `item_prev_${page - 1}`,
+      title: "⬅️ Previous",
+      description: "View previous items",
+    });
+  }
+
+  if (page < totalPages - 1) {
+    navigationRows.push({
+      id: `item_next_${page + 1}`,
+      title: "➡️ Next",
+      description: "View more items",
+    });
+  }
+
+  navigationRows.push({
+    id: "go_back_categories",
+    title: "↩️ Back to Categories",
+    description: "Choose a different category",
+  });
+
   const sections = [
     {
-      title: category,
-      rows: items.map((item, idx) => ({
-        id: `item_${idx}`,
-        title: item.name.substring(0, 24),
-        description: `${item.weight} ${item.unit} - ₹${item.price}`.substring(
-          0,
-          72,
-        ),
-      })),
+      title: `${category} (${page + 1}/${totalPages})`,
+      rows: itemRows,
     },
     {
       title: "Navigation",
-      rows: [
-        {
-          id: "go_back_categories",
-          title: "↩️ Back to Categories",
-          description: "Choose a different category",
-        },
-      ],
+      rows: navigationRows,
     },
   ];
 
@@ -965,6 +994,44 @@ Examples:
 
           // Selecting item handler
           if (state === "selecting_item") {
+            // next page
+            if (text.startsWith("item_next_")) {
+              const page = Number(text.replace("item_next_", ""));
+
+              const stateData = await conversation.getState(from, true);
+              const selectedCategory = stateData?.metadata?.selectedCategory;
+
+              const categoryItems =
+                await catalog.getItemsByCategory(selectedCategory);
+
+              await showCategoryItems(
+                from,
+                selectedCategory,
+                categoryItems,
+                page,
+              );
+
+              continue;
+            }
+            // previous page
+            if (text.startsWith("item_prev_")) {
+              const page = Number(text.replace("item_prev_", ""));
+
+              const stateData = await conversation.getState(from, true);
+              const selectedCategory = stateData?.metadata?.selectedCategory;
+
+              const categoryItems =
+                await catalog.getItemsByCategory(selectedCategory);
+
+              await showCategoryItems(
+                from,
+                selectedCategory,
+                categoryItems,
+                page,
+              );
+
+              continue;
+            }
             // Handle go back to categories
             if (text === "go_back_categories") {
               await showOrderCategories(from);
