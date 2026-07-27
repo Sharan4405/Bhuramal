@@ -113,8 +113,24 @@ async function sendStoreLocation(from) {
 // Helper to send main menu
 async function showMainMenu(from, userName = null) {
   const text = userName
-    ? `Hello ${userName}! 👋\n\nWelcome to *Bhuramal Bhagirath Prasad* - Your trusted partner for premium dry fruits and nuts! 🌟\n\nWhat can I help you with today?\n\nNeed help? Tap *Support & Queries*.`
-    : "What can I help you with today?\n\nNeed help? Tap *Support & Queries*.";
+    ? `Hi ${userName}! 👋
+
+Welcome to *Bhuramal Bhagirath Prasad* 😊
+
+Aaj aap kya order karna chahenge?
+
+👇 Neeche diye gaye options me se apni pasand ka option choose kar lijiye.
+
+Agar kisi bhi cheez me help chahiye ho, to *Support & Queries* par tap kar dijiye. 💬`
+    : `Hi! 👋
+
+Welcome to *Bhuramal Bhagirath Prasad* 😊
+
+Aaj aap kya order karna chahenge?
+
+👇 Neeche diye gaye options me se apni pasand ka option choose kar lijiye.
+
+Agar kisi bhi cheez me help chahiye ho, to *Support & Queries* par tap kar dijiye. 💬`;
 
   await sendButtonMessage(
     from,
@@ -128,13 +144,14 @@ async function showMainMenu(from, userName = null) {
 // Helper to show order categories
 async function showOrderCategories(from) {
   const categories = await catalog.getCategories();
+
   const sections = [
     {
-      title: "Order Categories",
+      title: "Choose a Category",
       rows: categories.map((cat, idx) => ({
         id: `order_cat_${idx}`,
         title: cat,
-        description: `Order from ${cat}`,
+        description: `View available ${cat}`,
       })),
     },
     {
@@ -143,7 +160,7 @@ async function showOrderCategories(from) {
         {
           id: "main_menu",
           title: "↩️ Back to Main Menu",
-          description: "Return to main menu",
+          description: "Go back",
         },
       ],
     },
@@ -151,9 +168,13 @@ async function showOrderCategories(from) {
 
   await sendListMessage(
     from,
-    "🛒 *Place Your Order*\n\nSelect a category:",
+    `🛍️ Chaliye, order shuru karte hain! 😊
+
+Sabse pehle ek category select kar lijiye.
+
+👇 Neeche list me se apni pasand ki category choose kijiye.`,
     sections,
-    "Select Category",
+    "Choose Category",
   );
 }
 
