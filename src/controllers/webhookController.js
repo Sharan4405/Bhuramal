@@ -23,8 +23,7 @@ const MAIN_MENU = {
     { id: "view_cart", title: "🛒 View Cart" },
     { id: "support", title: "💬 Support & Queries" },
   ],
-  footer:
-    '💡 Main menu par wapas aane ke liye kabhi bhi "menu" type kar dijiye.',
+  footer: 'Type "menu" anytime to return here',
 };
 
 // Support menu configuration
@@ -114,24 +113,8 @@ async function sendStoreLocation(from) {
 // Helper to send main menu
 async function showMainMenu(from, userName = null) {
   const text = userName
-    ? `Hi ${userName}! 👋
-
-Welcome to *Bhuramal Bhagirath Prasad* 😊
-
-Aaj aap kya order karna chahenge?
-
-👇 Neeche diye gaye options me se apni pasand ka option choose kar lijiye.
-
-Agar kisi bhi cheez me help chahiye ho, to *Support & Queries* par tap kar dijiye. 💬`
-    : `Hi! 👋
-
-Welcome to *Bhuramal Bhagirath Prasad* 😊
-
-Aaj aap kya order karna chahenge?
-
-👇 Neeche diye gaye options me se apni pasand ka option choose kar lijiye.
-
-Agar kisi bhi cheez me help chahiye ho, to *Support & Queries* par tap kar dijiye. 💬`;
+    ? `Hello ${userName}! 👋\n\nWelcome to *Bhuramal Bhagirath Prasad* - Your trusted partner for premium dry fruits and nuts! 🌟\n\nWhat can I help you with today?\n\nNeed help? Tap *Support & Queries*.`
+    : "What can I help you with today?\n\nNeed help? Tap *Support & Queries*.";
 
   await sendButtonMessage(
     from,
@@ -145,14 +128,13 @@ Agar kisi bhi cheez me help chahiye ho, to *Support & Queries* par tap kar dijiy
 // Helper to show order categories
 async function showOrderCategories(from) {
   const categories = await catalog.getCategories();
-
   const sections = [
     {
-      title: "Choose a Category",
+      title: "Order Categories",
       rows: categories.map((cat, idx) => ({
         id: `order_cat_${idx}`,
         title: cat,
-        description: `View available ${cat}`,
+        description: `Order from ${cat}`,
       })),
     },
     {
@@ -161,7 +143,7 @@ async function showOrderCategories(from) {
         {
           id: "main_menu",
           title: "↩️ Back to Main Menu",
-          description: "Go back",
+          description: "Return to main menu",
         },
       ],
     },
@@ -169,20 +151,16 @@ async function showOrderCategories(from) {
 
   await sendListMessage(
     from,
-    `🛍️ Chaliye, order shuru karte hain! 😊
-
-Sabse pehle ek category select kar lijiye.
-
-👇 Neeche list me se apni pasand ki category choose kijiye.`,
+    "🛒 *Place Your Order*\n\nSelect a category:",
     sections,
-    "Choose Category",
+    "Select Category",
   );
 }
 
 const PAGE_SIZE = 8;
 
 async function showCategoryItems(from, category, items, page = 0) {
-  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const totalPages = Math.ceil(items.length / PAGE_SIZE);
 
   const start = page * PAGE_SIZE;
   const end = start + PAGE_SIZE;
@@ -204,7 +182,7 @@ async function showCategoryItems(from, category, items, page = 0) {
     navigationRows.push({
       id: `item_prev_${page - 1}`,
       title: "⬅️ Previous",
-      description: "Pichhle products dekhein",
+      description: "View previous items",
     });
   }
 
@@ -212,14 +190,14 @@ async function showCategoryItems(from, category, items, page = 0) {
     navigationRows.push({
       id: `item_next_${page + 1}`,
       title: "➡️ Next",
-      description: "Aur products dekhein",
+      description: "View more items",
     });
   }
 
   navigationRows.push({
     id: "go_back_categories",
-    title: "↩️ Categories",
-    description: "Dusri category dekhein",
+    title: "↩️ Back to Categories",
+    description: "Choose a different category",
   });
 
   const sections = [
@@ -228,20 +206,16 @@ async function showCategoryItems(from, category, items, page = 0) {
       rows: itemRows,
     },
     {
-      title: "More Options",
+      title: "Navigation",
       rows: navigationRows,
     },
   ];
 
   await sendListMessage(
     from,
-    `😊 *${category}*
-
-Yahan available products ki list di gayi hai.
-
-👇 Jo product chahiye, us par tap karke select kar lijiye.`,
+    `📦 *${category}*\n\nSelect an item:`,
     sections,
-    "View Products",
+    "Select Item",
   );
 }
 
@@ -264,12 +238,12 @@ async function showCartWithOptions(from) {
 
   const sections = [
     {
-      title: "Aap kya karna chahenge?",
+      title: "Actions",
       rows: [
         {
           id: "change_quantity",
           title: "✏️ Change Quantity",
-          description: "Quantity update karein",
+          description: "Edit item quantities",
         },
         {
           id: "checkout",
@@ -279,36 +253,25 @@ async function showCartWithOptions(from) {
         {
           id: "orders",
           title: "➕ Continue Shopping",
-          description: "Aur products add karein",
+          description: "Add more items",
         },
         {
           id: "clear_cart",
           title: "🗑️ Clear Cart",
-          description: "Cart khaali karein",
+          description: "Remove all items",
         },
-        {
-          id: "main_menu",
-          title: "🏠 Main Menu",
-          description: "Main menu par jayein",
-        },
+        { id: "main_menu", title: "🏠 Main Menu", description: "Back to menu" },
       ],
     },
   ];
 
   await sendListMessage(
     from,
-    `🛒 *Ye raha aapka cart!*
-
-${itemsText}
-
-━━━━━━━━━━━━━━━━
-📦 Total Products: ${summary.totalItems}
-💰 *Total Bill: ₹${summary.totalAmount.toFixed(2)}*
-
-👇 Ab batayein, aage kya karna chahenge?`,
+    `🛒 *Your Cart*\n\n${itemsText}\n\n━━━━━━━━━━━━━━━━\n📦 Total Items: ${summary.totalItems}\n💰 *Total Amount: ₹${summary.totalAmount.toFixed(2)}*`,
     sections,
-    "Choose Option",
+    "Select Action",
   );
+
   await conversation.setState(from, "view_cart_options");
 }
 
@@ -557,7 +520,7 @@ async function handleIncoming(req, res) {
             }
           })();
 
-          const textLower = String(text).trim().toLowerCase();
+          const textLower = text.toLowerCase();
           const stateStart = Date.now();
 
           const state = await conversation.getState(from);
@@ -645,8 +608,6 @@ async function handleIncoming(req, res) {
           if (state === "manual") {
             continue;
           }
-
-      
 
           // Only respond to hi/hello in menu state
           if (state === "menu" && /^hi$|^hello$/i.test(text)) {
