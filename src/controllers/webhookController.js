@@ -23,8 +23,7 @@ const MAIN_MENU = {
     { id: "view_cart", title: "🛒 View Cart" },
     { id: "support", title: "💬 Support & Queries" },
   ],
-  footer:
-    '💡 Main menu par wapas aane ke liye kabhi bhi "menu" type kar dijiye.',
+  footer: 'Type "menu" anytime to return here',
 };
 
 // Support menu configuration
