@@ -264,12 +264,12 @@ async function showCartWithOptions(from) {
 
   const sections = [
     {
-      title: "Actions",
+      title: "Aap kya karna chahenge?",
       rows: [
         {
           id: "change_quantity",
           title: "✏️ Change Quantity",
-          description: "Edit item quantities",
+          description: "Quantity update karein",
         },
         {
           id: "checkout",
@@ -279,25 +279,36 @@ async function showCartWithOptions(from) {
         {
           id: "orders",
           title: "➕ Continue Shopping",
-          description: "Add more items",
+          description: "Aur products add karein",
         },
         {
           id: "clear_cart",
           title: "🗑️ Clear Cart",
-          description: "Remove all items",
+          description: "Cart khaali karein",
         },
-        { id: "main_menu", title: "🏠 Main Menu", description: "Back to menu" },
+        {
+          id: "main_menu",
+          title: "🏠 Main Menu",
+          description: "Main menu par jayein",
+        },
       ],
     },
   ];
 
   await sendListMessage(
     from,
-    `🛒 *Your Cart*\n\n${itemsText}\n\n━━━━━━━━━━━━━━━━\n📦 Total Items: ${summary.totalItems}\n💰 *Total Amount: ₹${summary.totalAmount.toFixed(2)}*`,
-    sections,
-    "Select Action",
-  );
+    `🛒 *Ye raha aapka cart!*
 
+${itemsText}
+
+━━━━━━━━━━━━━━━━
+📦 Total Products: ${summary.totalItems}
+💰 *Total Bill: ₹${summary.totalAmount.toFixed(2)}*
+
+👇 Ab batayein, aage kya karna chahenge?`,
+    sections,
+    "Choose Option",
+  );
   await conversation.setState(from, "view_cart_options");
 }
 
