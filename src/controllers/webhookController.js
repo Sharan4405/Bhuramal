@@ -23,7 +23,8 @@ const MAIN_MENU = {
     { id: "view_cart", title: "🛒 View Cart" },
     { id: "support", title: "💬 Support & Queries" },
   ],
-  footer: 'Type "menu" anytime to return here',
+  footer:
+    '💡 Main menu par wapas aane ke liye kabhi bhi "menu" type kar dijiye.',
 };
 
 // Support menu configuration
@@ -146,11 +147,11 @@ async function showOrderCategories(from) {
   const categories = await catalog.getCategories();
   const sections = [
     {
-      title: "Order Categories",
+      title: "Available Categories",
       rows: categories.map((cat, idx) => ({
         id: `order_cat_${idx}`,
         title: cat,
-        description: `Order from ${cat}`,
+        description: `View products`,
       })),
     },
     {
@@ -167,9 +168,13 @@ async function showOrderCategories(from) {
 
   await sendListMessage(
     from,
-    "🛒 *Place Your Order*\n\nSelect a category:",
+    `🛍️ Aap kya lena chahenge? 😊
+
+Sabhi categories neeche di gayi hain.
+
+👇 Neeche list me se apni pasand ki category choose kijiye.`,
     sections,
-    "Select Category",
+    "Choose Category",
   );
 }
 
