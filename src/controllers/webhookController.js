@@ -557,7 +557,7 @@ async function handleIncoming(req, res) {
             }
           })();
 
-          const textLower = text.toLowerCase();
+          const textLower = String(text).trim().toLowerCase();
           const stateStart = Date.now();
 
           const state = await conversation.getState(from);
@@ -646,12 +646,8 @@ async function handleIncoming(req, res) {
             continue;
           }
 
-          // Handle "menu" command globally
-          if (text.trim().toLowerCase() === "menu") {
-            await navigateToMenu(from);
-            continue;
-          }
-          
+      
+
           // Only respond to hi/hello in menu state
           if (state === "menu" && /^hi$|^hello$/i.test(text)) {
             const sendStart = Date.now();
