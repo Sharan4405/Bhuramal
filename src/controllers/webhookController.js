@@ -23,7 +23,8 @@ const MAIN_MENU = {
     { id: "view_cart", title: "🛒 View Cart" },
     { id: "support", title: "💬 Support & Queries" },
   ],
-  footer: 'Type "menu" anytime to return here',
+  footer:
+    '💡 Main menu par wapas aane ke liye kabhi bhi "menu" type kar dijiye.',
 };
 
 // Support menu configuration
@@ -203,7 +204,7 @@ async function showCategoryItems(from, category, items, page = 0) {
     navigationRows.push({
       id: `item_prev_${page - 1}`,
       title: "⬅️ Previous",
-      description: "View previous items",
+      description: "Pichhle products dekhein",
     });
   }
 
@@ -211,14 +212,14 @@ async function showCategoryItems(from, category, items, page = 0) {
     navigationRows.push({
       id: `item_next_${page + 1}`,
       title: "➡️ Next",
-      description: "View more items",
+      description: "Aur products dekhein",
     });
   }
 
   navigationRows.push({
     id: "go_back_categories",
-    title: "↩️ Back to Categories",
-    description: "Choose a different category",
+    title: "↩️ Categories",
+    description: "Dusri category dekhein",
   });
 
   const sections = [
@@ -227,16 +228,20 @@ async function showCategoryItems(from, category, items, page = 0) {
       rows: itemRows,
     },
     {
-      title: "Navigation",
+      title: "More Options",
       rows: navigationRows,
     },
   ];
 
   await sendListMessage(
     from,
-    `📦 *${category}*\n\nSelect an item:`,
+    `😊 *${category}*
+
+Yahan available products ki list di gayi hai.
+
+👇 Jo product chahiye, us par tap karke select kar lijiye.`,
     sections,
-    "Select Item",
+    "View Products",
   );
 }
 
