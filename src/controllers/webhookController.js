@@ -646,6 +646,12 @@ async function handleIncoming(req, res) {
             continue;
           }
 
+          // Handle "menu" command globally
+          if (text.trim().toLowerCase() === "menu") {
+            await navigateToMenu(from);
+            continue;
+          }
+          
           // Only respond to hi/hello in menu state
           if (state === "menu" && /^hi$|^hello$/i.test(text)) {
             const sendStart = Date.now();
