@@ -1160,7 +1160,7 @@ Examples:
             } else {
               await sendMessage(
                 from,
-                "Invalid item. Please select from the list above.",
+                "😅 Ye product samajh nahi aaya.\n\n👇 Kripya upar di gayi list me se hi koi product select kijiye.",
               );
             }
             continue;
@@ -1197,7 +1197,7 @@ Examples:
             } else {
               await sendMessage(
                 from,
-                "Please use the dropdown list above to select a quantity option.",
+                "😊 Quantity samajh nahi aayi.\n\n👇 Kripya upar di gayi list me se hi apni quantity select kijiye.",
               );
               continue;
             }
@@ -1206,7 +1206,10 @@ Examples:
             const selectedItem = stateData?.metadata?.selectedItem;
 
             if (!selectedItem) {
-              await sendMessage(from, "❌ Session expired. Please start over.");
+              await sendMessage(
+                from,
+                "😔 Lagta hai aapka session expire ho gaya hai.\n\nChaliye, dobara shuru karte hain.",
+              );
               await navigateToMenu(from);
               continue;
             }
@@ -1225,13 +1228,13 @@ Examples:
             // Ask customer for packet count
             await sendMessage(
               from,
-              `📦 You selected *${gramsRequested} gm*.
+             `✅ *${gramsRequested} gm* select ho gaya.
 
-How many packets would you like?
+📦 Ab kitne packets chahiye?
 
-Reply with only a number.
+👇 Sirf number type karke bata dijiye.
 
-Examples:
+*Example:*
 1
 2
 5
