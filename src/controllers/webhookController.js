@@ -202,7 +202,7 @@ async function showCategoryItems(from, category, items, page = 0) {
     navigationRows.push({
       id: `item_prev_${page - 1}`,
       title: "⬅️ Previous",
-      description: "View previous items",
+      description: "Pichhle products dekhein",
     });
   }
 
@@ -210,14 +210,14 @@ async function showCategoryItems(from, category, items, page = 0) {
     navigationRows.push({
       id: `item_next_${page + 1}`,
       title: "➡️ Next",
-      description: "View more items",
+      description: "Aur products dekhein",
     });
   }
 
   navigationRows.push({
     id: "go_back_categories",
-    title: "↩️ Back to Categories",
-    description: "Choose a different category",
+    title: "↩️ Categories",
+    description: "Dusri category dekhein",
   });
 
   const sections = [
@@ -226,16 +226,20 @@ async function showCategoryItems(from, category, items, page = 0) {
       rows: itemRows,
     },
     {
-      title: "Navigation",
+      title: "More Options",
       rows: navigationRows,
     },
   ];
 
   await sendListMessage(
     from,
-    `📦 *${category}*\n\nSelect an item:`,
+    `📦 *${category}*
+
+Yahan available products ki list di gayi hai.
+
+👇 Jo product chahiye, us par tap karke select kar lijiye.`,
     sections,
-    "Select Item",
+    "Choose Product",
   );
 }
 
@@ -258,38 +262,50 @@ async function showCartWithOptions(from) {
 
   const sections = [
     {
-      title: "Actions",
+      title: "Aap kya karna chahenge?",
       rows: [
         {
           id: "change_quantity",
           title: "✏️ Change Quantity",
-          description: "Edit item quantities",
+          description: "Quantity update karein",
         },
         {
           id: "checkout",
           title: "💳 Checkout",
-          description: "Proceed to payment",
+          description: "Payment karke order complete karein",
         },
         {
           id: "orders",
           title: "➕ Continue Shopping",
-          description: "Add more items",
+          description: "Aur products add karein",
         },
         {
           id: "clear_cart",
           title: "🗑️ Clear Cart",
-          description: "Remove all items",
+          description: "Cart khaali karein",
         },
-        { id: "main_menu", title: "🏠 Main Menu", description: "Back to menu" },
+        {
+          id: "main_menu",
+          title: "🏠 Main Menu",
+          description: "Main menu par jayein",
+        },
       ],
     },
   ];
 
   await sendListMessage(
     from,
-    `🛒 *Your Cart*\n\n${itemsText}\n\n━━━━━━━━━━━━━━━━\n📦 Total Items: ${summary.totalItems}\n💰 *Total Amount: ₹${summary.totalAmount.toFixed(2)}*`,
+    `🛒 *Ye raha aapka cart!*
+
+${itemsText}
+
+━━━━━━━━━━━━━━━━
+📦 Total Products: ${summary.totalItems}
+💰 *Total Bill: ₹${summary.totalAmount.toFixed(2)}*
+
+👇 Ab batayein, aage kya karna chahenge?`,
     sections,
-    "Select Action",
+    "Continue",
   );
 
   await conversation.setState(from, "view_cart_options");
