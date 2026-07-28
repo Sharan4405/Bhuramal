@@ -88,7 +88,7 @@ async function navigateToSupport(from) {
   await conversation.setState(from, "support_menu");
   await sendButtonMessage(
     from,
-    "💬 *Support & Queries*\n\nHow can we help you today?",
+    "💬 *Support & Queries*\n\nBatayein, aapko kis cheez mein madad chahiye?",
     SUPPORT_MENU.buttons,
   );
 }
@@ -103,10 +103,14 @@ async function sendStoreLocation(from) {
 
   await sendUrlButton(
     from,
-    `📍 *Store Address*\n${STORE_ADDRESS}\n\nTap the button below to open the location in Google Maps.`,
-    "View Location",
+    `📍 *Store Ka Address*
+
+${STORE_ADDRESS}
+
+Neeche button se Google Maps par location dekh sakte hain 😊`,
+    "📍 Location Open Karein",
     mapsLink,
-    "📍 Location",
+    "📍 Address",
   );
 }
 
@@ -146,11 +150,11 @@ async function showOrderCategories(from) {
   const categories = await catalog.getCategories();
   const sections = [
     {
-      title: "Available Categories",
+      title: "Category Choose Karein",
       rows: categories.map((cat, idx) => ({
         id: `order_cat_${idx}`,
         title: cat,
-        description: `View products`,
+        description: "Products Dekhein",
       })),
     },
     {
@@ -158,8 +162,8 @@ async function showOrderCategories(from) {
       rows: [
         {
           id: "main_menu",
-          title: "↩️ Back to Main Menu",
-          description: "Return to main menu",
+          title: "↩️ Wapas Menu Par",
+          description: "Main menu",
         },
       ],
     },
@@ -499,7 +503,7 @@ async function handleIncoming(req, res) {
           if (!text) {
             await sendMessage(
               from,
-              "Sorry, I can only process text messages and button selections.",
+              "😊 Maaf kijiye, main ye message samajh nahi paaya.\nKripya text bhejein, location share karein ya diye gaye options mein se select karein.",
             );
             continue;
           }
@@ -600,7 +604,9 @@ async function handleIncoming(req, res) {
             if (metadata && metadata.expired) {
               await sendMessage(
                 from,
-                `⏱️ *Session Expired*\n\nYour previous session has expired due to inactivity.\n\nPlease start a new order from the menu below.`,
+                `⏱️ Lagta hai kaafi der ho gayi hai 😊
+
+Aapka pichla selection save nahi reh paaya. Koi baat nahi, chaliye dobara shuru karte hain.`,
               );
               await navigateToMenu(from);
             } else {
@@ -617,7 +623,13 @@ async function handleIncoming(req, res) {
               await conversation.setState(from, "awaiting_order_id");
               await sendMessage(
                 from,
-                '📦 *Track Your Order*\n\nPlease enter your Order ID to check the status.\n\nYou can find the Order ID in your payment confirmation message.\n\nType "menu" to return.',
+                `📦 *Order Track Karein*
+
+Apna Order ID bhej dijiye, hum aapke order ki details bata denge 😊
+
+Order ID aapko payment confirmation message mein mil jayegi.
+
+Menu par wapas jaane ke liye "menu" likhein.`,
               );
             } else if (text === "view_address") {
               await sendStoreLocation(from);
@@ -632,10 +644,18 @@ async function handleIncoming(req, res) {
 
               await sendMessage(
                 from,
-                "👨‍💼 You're now connected with our support team. We'll assist you shortly.\n\nType \"menu\" anytime to return to the bot.",
+                `👨‍💼 Theek hai 😊
+
+Aapki baat hamari team tak pahucha di gayi hai.
+Jaldi hi hamari team aapse contact karegi.
+
+Bot par wapas aane ke liye kabhi bhi "menu" likh sakte hain.`,
               );
             } else {
-              await sendMessage(from, "Please use the buttons above.");
+              await sendMessage(
+                from,
+                "😊 Maaf kijiye, main samajh nahi paaya.\nKripya diye gaye options mein se select kar dijiye.",
+              );
             }
             continue;
           }
@@ -691,7 +711,9 @@ async function handleIncoming(req, res) {
             if (isEmpty) {
               await sendButtonMessage(
                 from,
-                "🛒 Your cart is empty.\n\nAdd items first!",
+                `Lagta hai aapka cart abhi khaali hai.
+
+Pehle apni pasand ke products add kar lijiye, phir hum checkout ki process aage badhayenge.`,
                 [{ id: "orders", title: "🛒 Start Shopping" }],
               );
               await conversation.setState(from, "menu");
@@ -699,11 +721,11 @@ async function handleIncoming(req, res) {
               await conversation.setState(from, "address_input");
               await sendMessage(
                 from,
-                `📍 *Delivery Address Required*
+                `Delivery ke liye hume aapka complete address chahiye.
 
-Please provide your complete delivery address.
+Kripya apna poora delivery address bhej dijiye.
 
-Your address should include:
+Address me ye details zarur honi chahiye:
 
 🏠 House / Flat / Plot Number
 📍 Area / Locality
@@ -730,14 +752,19 @@ Rajasthan
               if (await cartService.isEmpty(from)) {
                 await sendButtonMessage(
                   from,
-                  "🛒 Your cart is empty.\n\nStart shopping to add items!",
+                  `Aapka cart abhi khaali hai.
+
+Apni pasand ke products add kijiye aur phir checkout kijiye.`,
                   [{ id: "orders", title: "🛒 Start Shopping" }],
                 );
               } else {
                 await showCartWithOptions(from);
               }
             } else {
-              await sendMessage(from, "Please use the buttons above.");
+              await sendMessage(
+                from,
+                "Kripya upar diye gaye options me se kisi ek ko choose kijiye.",
+              );
             }
             continue;
           }
@@ -751,7 +778,8 @@ Rajasthan
               if (!cart.items || cart.items.length === 0) {
                 await sendButtonMessage(
                   from,
-                  "🛒 Your cart is empty.\n\nStart shopping to add items!",
+                  "🛒 Aapka cart abhi empty hai.\n\nKuch items add karke shopping start karein 😊",
+
                   [{ id: "orders", title: "🛒 Start Shopping" }],
                 );
                 await conversation.setState(from, "menu");
@@ -760,7 +788,7 @@ Rajasthan
 
               const sections = [
                 {
-                  title: "Select Item to Edit",
+                  title: "Item Choose Karein",
                   rows: cart.items.map((item, idx) => {
                     const weight =
                       item.unit === "grams"
@@ -780,7 +808,7 @@ Rajasthan
                     {
                       id: "view_cart",
                       title: "↩️ Back to Cart",
-                      description: "Cancel",
+                      description: "Kuch change nahi karna",
                     },
                   ],
                 },
@@ -788,9 +816,9 @@ Rajasthan
 
               await sendListMessage(
                 from,
-                `✏️ *Change Quantity*\n\nSelect the item you want to edit:`,
+                `✏️ Kaunsa item change karna hai?\n\nNeeche se item select kar dijiye, aap quantity ya packet size update kar sakte hain 😊`,
                 sections,
-                "Select Item",
+                "Item Select Karein",
               );
               await conversation.setState(from, "select_item_to_edit");
               continue;
@@ -815,11 +843,9 @@ Rajasthan
               await conversation.setState(from, "address_input");
               await sendMessage(
                 from,
-                `📍 *Delivery Address Required*
+                `📍 Order deliver karne ke liye apna address bhej dijiye 😊
 
-Please provide your complete delivery address.
-
-Your address should include:
+Address mein ye details zaroor likh dein:
 
 🏠 House / Flat / Plot Number
 📍 Area / Locality
@@ -841,15 +867,20 @@ Rajasthan
             // Handle clear cart
             if (text === "clear_cart") {
               await cartService.clearCart(from);
-              await sendButtonMessage(from, "✅ Cart cleared successfully!", [
-                { id: "orders", title: "🛒 Start Shopping" },
-              ]);
+              await sendButtonMessage(
+                from,
+                "✅ Aapka cart khali kar diya gaya hai.\n\nAgar dobara kuch order karna ho toh neeche se start kar sakte hain 😊",
+                [{ id: "orders", title: "🛒 Shopping Shuru Karein" }],
+              );
               await conversation.setState(from, "menu");
               continue;
             }
 
             // If unrecognized action
-            await sendMessage(from, "Please use the options above.");
+            await sendMessage(
+              from,
+              "Maaf kijiye, main samajh nahi paaya 😊\nKripya diye gaye options mein se koi ek select kar dijiye.",
+            );
             continue;
           }
 
@@ -862,7 +893,10 @@ Rajasthan
               const item = cart.items[itemIndex];
 
               if (!item) {
-                await sendMessage(from, "❌ Item not found.");
+                await sendMessage(
+                  from,
+                  "Maaf kijiye 😊 Ye item nahi mil paaya. Kripya dobara try karein.",
+                );
                 continue;
               }
 
@@ -872,7 +906,7 @@ Rajasthan
 
               const sections = [
                 {
-                  title: "Select New Quantity",
+                  title: "Kitni Quantity Chahiye?",
                   rows: quantityOptions.map((qty) => {
                     // Calculate price based on item's existing unit price
                     const price =
@@ -893,8 +927,8 @@ Rajasthan
                   rows: [
                     {
                       id: "view_cart",
-                      title: "↩️ Back to Cart",
-                      description: "Cancel",
+                      title: "↩️ Wapas Cart Par",
+                      description: "Koi change nahi karna",
                     },
                   ],
                 },
@@ -902,9 +936,13 @@ Rajasthan
 
               await sendListMessage(
                 from,
-                `✏️ *Edit: ${item.name}*\n\nCurrent: ${item.unit === "grams" ? `${item.weight}g` : `${item.quantity} ${item.unit}`}\n\nSelect new quantity:`,
+                `✏️ ${item.name} ki quantity change karni hai?\n\nAbhi: ${
+                  item.unit === "grams"
+                    ? `${item.weight}g`
+                    : `${item.quantity} ${item.unit}`
+                }\n\nKitni quantity chahiye, neeche se select kar dijiye 😊`,
                 sections,
-                "Select Quantity",
+                "Quantity Select Karein",
               );
               await conversation.setState(from, "update_item_quantity", {
                 itemIndex,
@@ -941,13 +979,13 @@ Rajasthan
               // Ask for packet count
               await sendMessage(
                 from,
-                `📦 You selected *${packetSize}g*.
+                `✅ *${packetSize}g* wala pack select ho gaya 😊
 
-How many packets would you like?
+📦 Ab kitne packets chahiye?
 
-Reply with only a number.
+👇 Sirf number type karke bata dijiye.
 
-Examples:
+*Example:*
 1
 2
 5
@@ -972,7 +1010,15 @@ Examples:
             if (isNaN(packets) || packets <= 0) {
               await sendMessage(
                 from,
-                "❌ Please enter a valid number.\n\nExample:\n1\n2\n5\n10",
+                `😊 Samajh nahi aaya.
+
+Packet ki quantity number mein bhej dijiye.
+
+*Example:*
+1
+2
+5
+10`,
               );
               continue;
             }
@@ -989,10 +1035,16 @@ Examples:
             );
 
             if (result.success) {
-              await sendMessage(from, "✅ Cart updated successfully!");
+              await sendMessage(
+                from,
+                "✅ Theek hai, quantity update kar di gayi hai 😊",
+              );
               await showCartWithOptions(from);
             } else {
-              await sendMessage(from, "❌ Error updating cart.");
+              await sendMessage(
+                from,
+                "❌ Maaf kijiye, quantity update nahi ho paayi. Kripya dobara try karein.",
+              );
             }
 
             continue;
@@ -1022,7 +1074,7 @@ Examples:
             } else {
               await sendMessage(
                 from,
-                "Invalid category. Please select from the list above.",
+                "😊 Maaf kijiye, ye category samajh nahi aayi.\nKripya diye gaye options mein se category select kar dijiye.",
               );
             }
             continue;
@@ -1080,7 +1132,10 @@ Examples:
             const selectedCategory = stateData?.metadata?.selectedCategory;
 
             if (!selectedCategory) {
-              await sendMessage(from, "Session expired. Please start over.");
+              await sendMessage(
+                from,
+                "😊 Aapka pichla selection continue nahi ho paaya.\nChaliye, dobara menu se shuru karte hain.",
+              );
               await navigateToMenu(from);
               continue;
             }
@@ -1665,12 +1720,14 @@ Kripya thodi der baad dobara try kijiye. Agar problem bani rahe, to hamari suppo
               if (!order) {
                 await sendButtonMessage(
                   from,
-                  `❌ *Order Not Found*\n\nNo order found with ID: ${orderId}\n\nPlease check your Order ID and try again.`,
+                  `😊 Maaf kijiye, hume ye Order ID nahi mil paayi.
+
+Kripya Order ID check karke dobara bhej dijiye. Agar koi dikkat ho toh humari team se baat kar sakte hain.`,
                   [
-                    { id: "track_order", title: "🔍 Try Again" },
-                    { id: "support", title: "💬 Contact Support" },
+                    { id: "track_order", title: "🔍 Dobara Check Karein" },
+                    { id: "support", title: "💬 Team Se Baat Karein" },
                   ],
-                  "Order Not Found",
+                  "Order Nahi Mila",
                 );
                 await conversation.setState(from, "menu");
                 continue;
@@ -1699,7 +1756,7 @@ Kripya thodi der baad dobara try kijiye. Agar problem bani rahe, to hamari suppo
 
               // Send with buttons in one message
               await sendButtonMessage(from, statusMsg, [
-                { id: "track_order", title: "🔍 Track Another" },
+                { id: "track_order", title: "🔍 Aur Order Track Karein" },
                 { id: "main_menu", title: "🏠 Main Menu" },
               ]);
 
@@ -1708,12 +1765,14 @@ Kripya thodi der baad dobara try kijiye. Agar problem bani rahe, to hamari suppo
               console.error("❌ Error fetching order:", error);
               await sendButtonMessage(
                 from,
-                `❌ *Error*\n\nSorry, there was an error retrieving your order. Please try again or contact support.`,
+                `😊 Maaf kijiye, abhi aapke order ki details nahi mil paayi.
+
+Kripya thodi der baad dobara try karein. Agar dikkat ho toh humari team se baat kar sakte hain.`,
                 [
-                  { id: "track_order", title: "🔍 Try Again" },
-                  { id: "support", title: "💬 Contact Support" },
+                  { id: "track_order", title: "🔍 Dobara Try Karein" },
+                  { id: "support", title: "💬 Team Se Baat Karein" },
                 ],
-                "Error",
+                "Order Details",
               );
               await conversation.setState(from, "menu");
             }
@@ -1725,7 +1784,7 @@ Kripya thodi der baad dobara try kijiye. Agar problem bani rahe, to hamari suppo
           // Fallback if no recognized state or trigger
           await sendMessage(
             from,
-            "Send 'hi' to start. I can show a menu and help with orders and support.",
+            "👋 Namaste 😊\n\nShuru karne ke liye 'Hi' bhej dijiye.\nMain aapko products, orders aur support mein help kar dunga.",
           );
         }
       }
