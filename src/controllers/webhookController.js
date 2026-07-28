@@ -1228,7 +1228,7 @@ Examples:
             // Ask customer for packet count
             await sendMessage(
               from,
-             `✅ *${gramsRequested} gm* select ho gaya.
+              `✅ *${gramsRequested} gm* select ho gaya.
 
 📦 Ab kitne packets chahiye?
 
@@ -1252,14 +1252,25 @@ Examples:
             if (isNaN(packets) || packets <= 0) {
               await sendMessage(
                 from,
-                "❌ Please enter a valid number.\n\nExample:\n1\n2\n5\n10",
+                `Please sirf packet ki quantity number me batayein.
+
+Example:
+1
+2
+5
+10`,
               );
               continue;
             }
 
             const stateData = await conversation.getState(from, true);
             if (!stateData?.metadata?.selectedItem) {
-              await sendMessage(from, "❌ Session expired. Please start over.");
+              await sendMessage(
+                from,
+                `Aapka session expire ho gaya hai.
+
+Chaliye, dobara shuru karte hain.`,
+              );
               await navigateToMenu(from);
               continue;
             }
@@ -1279,19 +1290,23 @@ Examples:
             });
 
             if (!cartResult.success) {
-              await sendMessage(from, "❌ Error adding item to cart.");
+              await sendMessage(
+                from,
+                "Maaf kijiye, product cart me add nahi ho paya. Kripya ek baar phir try kijiye.",
+              );
               continue;
             }
 
             await sendButtonMessage(
               from,
-              `✅ Added ${packets} × ${gramsRequested}gm of ${selectedItem.name} to cart!
+              `✅ *${selectedItem.name}* aapke cart me add kar diya gaya hai.
 
-💰 Total: ₹${(unitPrice * packets).toFixed(2)}
+📦 Quantity: ${packets} × ${gramsRequested} gm
+💰 Total Amount: ₹${(unitPrice * packets).toFixed(2)}
 
 ${await cartService.formatCartSummary(from)}
 
-What would you like to do next?`,
+Ab batayein, aage kya karna chahenge?`,
               [
                 { id: "add_more", title: "Add More Items" },
                 { id: "view_cart", title: "View Cart" },
