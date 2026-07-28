@@ -1117,7 +1117,7 @@ Examples:
 
               const sections = [
                 {
-                  title: "Select Quantity",
+                  title: "Kitni quantity chahiye?",
                   rows: [
                     {
                       id: "qty_250",
@@ -1137,12 +1137,12 @@ Examples:
                   ],
                 },
                 {
-                  title: "Navigation",
+                  title: "More Options",
                   rows: [
                     {
                       id: "go_back_items",
-                      title: "↩️ Back to Items",
-                      description: "Choose a different item",
+                      title: "↩️ Back to Products",
+                      description: "Dusra product dekhein",
                     },
                   ],
                 },
@@ -1151,9 +1151,9 @@ Examples:
               await sendListMessage(
                 from,
                 `📦 *${selectedItem.name}*\n\n` +
-                  `📊 Base: ${selectedItem.weight} ${selectedItem.unit} - ₹${selectedItem.price}\n` +
-                  `💰 Price per kg: ₹${breakdown.pricePerKg}\n\n` +
-                  `Please select the quantity you want to order:`,
+                  `💰 ${selectedItem.weight} ${selectedItem.unit} - ₹${selectedItem.price}\n` +
+                  `📊 Price per kg: ₹${breakdown.pricePerKg}\n\n` +
+                  `👇 Ab batayein, kitni quantity chahiye?`,
                 sections,
                 "Select Quantity",
               );
