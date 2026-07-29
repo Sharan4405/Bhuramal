@@ -806,7 +806,7 @@ Apni pasand ke products add kijiye aur phir checkout kijiye.`,
 
               await sendListMessage(
                 from,
-                `✏️ *Change Quantity*\n\nSelect the item you want to edit:`,
+                `✏️ Kaunsa item change karna hai?\n\nNeeche se item select kar dijiye, aap quantity ya packet size update kar sakte hain `,
                 sections,
                 "Select Item",
               );
