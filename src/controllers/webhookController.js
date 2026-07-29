@@ -831,6 +831,20 @@ Apni pasand ke products add kijiye aur phir checkout kijiye.`,
               continue;
             }
 
+            // Retry checkout after payment link failure
+            if (text === "retry_checkout") {
+              // Clear previous cart
+              await cartService.clearCart(from);
+
+              // Show main menu
+              await showMainMenu(from);
+
+              // Update conversation state
+              await conversation.setState(from, "menu");
+
+              continue;
+            }
+
             // Handle orders (continue shopping)
             if (text === "orders") {
               await showOrderCategories(from);
@@ -1664,7 +1678,7 @@ Kripya dobara try kijiye. Agar problem bani rahe, to hamari support team aapki m
 
 `,
                   [
-                    { id: "orders", title: "🔄 Try Again" },
+                    { id: "retry_checkout", title: "🔄 Try Again" },
                     { id: "support", title: "💬 Contact Support" },
                   ],
                   "Payment",
@@ -1684,7 +1698,7 @@ Kripya dobara try kijiye. Agar problem bani rahe, to hamari support team aapki m
 
 Kripya thodi der baad dobara try kijiye. Agar problem bani rahe, to hamari support team se sampark kar sakte hain.`,
                 [
-                  { id: "orders", title: "🔄 Try Again" },
+                  { id: "retry_checkout", title: "🔄 Try Again" },
                   { id: "support", title: "💬 Contact Support" },
                 ],
                 "Error",
