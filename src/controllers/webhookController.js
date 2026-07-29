@@ -883,7 +883,10 @@ Rajasthan
               const item = cart.items[itemIndex];
 
               if (!item) {
-                await sendMessage(from, "❌ Item not found.");
+                await sendMessage(
+                  from,
+                  "Maaf kijiye 😊 Ye item nahi mil paaya.",
+                );
                 continue;
               }
 
@@ -893,7 +896,7 @@ Rajasthan
 
               const sections = [
                 {
-                  title: "Select New Quantity",
+                  title: "Kitni Quantity Chahiye?",
                   rows: quantityOptions.map((qty) => {
                     // Calculate price based on item's existing unit price
                     const price =
@@ -923,7 +926,7 @@ Rajasthan
 
               await sendListMessage(
                 from,
-                `✏️ *Edit: ${item.name}*\n\nCurrent: ${item.unit === "grams" ? `${item.weight}g` : `${item.quantity} ${item.unit}`}\n\nSelect new quantity:`,
+                `✏️ *Edit: ${item.name}*\n\nAbhi: ${item.unit === "grams" ? `${item.weight}g` : `${item.quantity} ${item.unit}`}\n\nKitni quantity chahiye, neeche se select kar dijiye`,
                 sections,
                 "Select Quantity",
               );
@@ -962,13 +965,13 @@ Rajasthan
               // Ask for packet count
               await sendMessage(
                 from,
-                `📦 You selected *${packetSize}g*.
+                `✅ *${packetSize}g* wala pack select ho gaya.
 
-How many packets would you like?
+📦 Ab kitne packets chahiye?
 
-Reply with only a number.
+👇 Sirf number type karke bata dijiye.
 
-Examples:
+Example:
 1
 2
 5
@@ -993,7 +996,15 @@ Examples:
             if (isNaN(packets) || packets <= 0) {
               await sendMessage(
                 from,
-                "❌ Please enter a valid number.\n\nExample:\n1\n2\n5\n10",
+                `😊 Samajh nahi aaya.
+              
+Packet ki quantity number mein bhej dijiye.
+              
+*Example:*
+1
+2
+5
+10`,
               );
               continue;
             }
@@ -1010,7 +1021,10 @@ Examples:
             );
 
             if (result.success) {
-              await sendMessage(from, "✅ Cart updated successfully!");
+              await sendMessage(
+                from,
+                "✅ Theek hai, quantity update kar di gayi hai",
+              );
               await showCartWithOptions(from);
             } else {
               await sendMessage(from, "❌ Error updating cart.");
