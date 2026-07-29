@@ -632,10 +632,18 @@ async function handleIncoming(req, res) {
 
               await sendMessage(
                 from,
-                "👨‍💼 You're now connected with our support team. We'll assist you shortly.\n\nType \"menu\" anytime to return to the bot.",
+                `👨‍💼 Theek hai 😊
+              
+              Aapki baat hamari team tak pahucha di gayi hai.
+              Jaldi hi hamari team aapse contact karegi.
+              
+              Bot par wapas aane ke liye kabhi bhi "menu" likh sakte hain.`,
               );
             } else {
-              await sendMessage(from, "Please use the buttons above.");
+              await sendMessage(
+                from,
+                "😊 Maaf kijiye, main samajh nahi paaya.\nKripya diye gaye options mein se select kar dijiye.",
+              );
             }
             continue;
           }
