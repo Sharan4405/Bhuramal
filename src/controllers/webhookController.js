@@ -836,11 +836,9 @@ Apni pasand ke products add kijiye aur phir checkout kijiye.`,
               // Clear previous cart
               await cartService.clearCart(from);
 
-              // Show main menu
-              await showMainMenu(from);
-
-              // Update conversation state
               await conversation.setState(from, "menu");
+
+              await showMainMenu(from);
 
               continue;
             }
@@ -1669,7 +1667,7 @@ Payment Razorpay ke through bilkul secure hai.`;
                   "❌ Payment link creation failed:",
                   paymentResult.error,
                 );
-
+                await conversation.setState(from, "menu");
                 await sendButtonMessage(
                   from,
                   `Maaf kijiye, payment link banane me thodi dikkat aa gayi.
