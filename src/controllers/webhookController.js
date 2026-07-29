@@ -1366,11 +1366,9 @@ Ab batayein, aage kya karna chahenge?`,
               await conversation.setState(from, "address_input");
               await sendMessage(
                 from,
-                `📍 *Delivery Address Required*
+                `Delivery ke liye hume aapka complete address chahiye.
 
-Please provide your complete delivery address.
-
-Your address should include:
+Kripya apna poora address bhej dijiye, jisme ye details zarur honi chahiye:
 
 🏠 House / Flat / Plot Number
 📍 Area / Locality
@@ -1391,7 +1389,9 @@ Rajasthan
               if (await cartService.isEmpty(from)) {
                 await sendButtonMessage(
                   from,
-                  "🛒 Your cart is empty.\n\nStart shopping to add items!",
+                  `Aapka cart abhi khaali hai.
+
+Chaliye, shopping shuru karte hain! 😊`,
                   [{ id: "orders", title: "🛒 Start Shopping" }],
                 );
                 await conversation.setState(from, "menu");
@@ -1401,7 +1401,9 @@ Rajasthan
             } else {
               await sendMessage(
                 from,
-                `❓ Unrecognized option: "${text}". Please use the buttons to proceed.`,
+                `Maaf kijiye, "${text}" option samajh nahi aaya.
+
+Kripya upar diye gaye options me se kisi ek ko select kijiye.`,
               );
             }
             continue;
@@ -1423,10 +1425,12 @@ Rajasthan
               if (!existingUser?.fullAddress) {
                 await sendMessage(
                   from,
-                  `❌ Please enter your complete delivery address first.
-
+                  `Delivery se pehle hume aapka complete address chahiye.
+                
+Kripya pehle apna poora address bhej dijiye.
+                
 Example:
-
+                
 House No. 21
 Vaishali Nagar
 Jaipur
@@ -1441,9 +1445,9 @@ Rajasthan
               if (!latitude || !longitude) {
                 await sendMessage(
                   from,
-                  `❌ Location not received.
-
-Please share your current location again 📍`,
+                  `Lagta hai location sahi se receive nahi ho paayi.
+                
+Kripya dobara apni current location share kar dijiye.`,
                 );
 
                 continue;
@@ -1467,12 +1471,11 @@ Please share your current location again 📍`,
               if (!validation.valid) {
                 await sendMessage(
                   from,
-                  `❌ Invalid Delivery Address
+                  `Delivery me koi dikkat na ho, isliye hume complete address chahiye.
 
-Please enter your complete delivery address.
+Kripya apna address dobara check karke bhej dijiye.
 
 ${validation.errors.map((error) => `• ${error}`).join("\n")}
-
 
 Example:
 
@@ -1501,10 +1504,11 @@ Rajasthan
 
               await sendMessage(
                 from,
-                `✅ Address verified successfully.
+                `Address receive ho gaya.
 
-Now please share your current location 📍
-To share location:
+Ab bas apni current location share kar dijiye, taaki hum delivery location confirm kar saken.
+
+Location share karne ke liye:
 📎 Attachment → Location → Send Current Location`,
               );
 
@@ -1517,9 +1521,11 @@ To share location:
             if (!validation.valid) {
               await sendMessage(
                 from,
-                `❌ Invalid Delivery Address
-
-${validation.errors.map((error) => `• ${error}`).join("\n")}`,
+                `Address abhi complete nahi lag raha.
+              
+Kripya niche di gayi details check karke dobara bhej dijiye.
+              
+              ${validation.errors.map((error) => `• ${error}`).join("\n")}`,
               );
 
               continue;
@@ -1531,7 +1537,9 @@ ${validation.errors.map((error) => `• ${error}`).join("\n")}`,
             if (cartSummary.items.length === 0) {
               await sendMessage(
                 from,
-                "🛒 Your cart is empty. Please add items first.",
+                `🛒 Aapka cart abhi khaali hai.
+
+Pehle kuch products add kar lijiye, phir hum checkout ki process aage badhayenge.`,
               );
 
               await navigateToMenu(from);
@@ -1613,7 +1621,19 @@ ${validation.errors.map((error) => `• ${error}`).join("\n")}`,
                 });
 
                 // Send payment button with order summary
-                const orderSummary = `📦 *Order Summary*\n\n${itemsList}\n💰 *Total: ₹${cartSummary.totalAmount.toFixed(2)}*\n\n📍 *Delivery Address:*\n${fullAddress}\n\nOrder ID: ${newOrder.orderId}\n\n💳 Complete your payment to confirm the order.\n\nPayment is secure via Razorpay 🔒`;
+                const orderSummary = `📦 *Aapke order ki details*
+
+${itemsList}
+💰 *Total Amount: ₹${cartSummary.totalAmount.toFixed(2)}*
+
+📍 *Delivery Address:*
+${fullAddress}
+
+🧾 Order ID: ${newOrder.orderId}
+
+Neeche diye gaye button par tap karke payment complete kar dijiye.
+
+Payment Razorpay ke through bilkul secure hai.`;
 
                 await sendUrlButton(
                   from,
@@ -1637,12 +1657,16 @@ ${validation.errors.map((error) => `• ${error}`).join("\n")}`,
 
                 await sendButtonMessage(
                   from,
-                  `❌ Unable to create payment link. Please try again or contact support.\n\nOrder ID: ${newOrder.orderId}`,
+                  `Maaf kijiye, payment link banane me thodi dikkat aa gayi.
+
+Kripya dobara try kijiye. Agar problem bani rahe, to hamari support team aapki madad karegi.
+
+🧾 Order ID: ${newOrder.orderId}`,
                   [
-                    { id: "orders", title: "🛒 Try Again" },
+                    { id: "orders", title: "🔄 Try Again" },
                     { id: "support", title: "💬 Contact Support" },
                   ],
-                  "Payment Error",
+                  "Payment",
                 );
               }
             } catch (error) {
@@ -1655,9 +1679,11 @@ ${validation.errors.map((error) => `• ${error}`).join("\n")}`,
               // Notify user of error
               await sendButtonMessage(
                 from,
-                `❌ *Error Processing Order*\n\nSorry, there was an error processing your order. Please try again or contact support.\n\nError: ${error.message}`,
+                `Maaf kijiye, aapka order process karte waqt ek dikkat aa gayi.
+
+Kripya thodi der baad dobara try kijiye. Agar problem bani rahe, to hamari support team se sampark kar sakte hain.`,
                 [
-                  { id: "orders", title: "🛒 Try Again" },
+                  { id: "orders", title: "🔄 Try Again" },
                   { id: "support", title: "💬 Contact Support" },
                 ],
                 "Error",
@@ -1677,12 +1703,14 @@ ${validation.errors.map((error) => `• ${error}`).join("\n")}`,
               if (!order) {
                 await sendButtonMessage(
                   from,
-                  `❌ *Order Not Found*\n\nNo order found with ID: ${orderId}\n\nPlease check your Order ID and try again.`,
+                  `😊 Maaf kijiye, hume ye Order ID nahi mil paayi.
+
+Kripya Order ID check karke dobara bhej dijiye. Agar koi dikkat ho toh humari team se baat kar sakte hain.`,
                   [
-                    { id: "track_order", title: "🔍 Try Again" },
-                    { id: "support", title: "💬 Contact Support" },
+                    { id: "track_order", title: "🔍 Dobara Check Karein" },
+                    { id: "support", title: "💬 Team Se Baat Karein" },
                   ],
-                  "Order Not Found",
+                  "Order Nahi Mila",
                 );
                 await conversation.setState(from, "menu");
                 continue;
@@ -1720,12 +1748,14 @@ ${validation.errors.map((error) => `• ${error}`).join("\n")}`,
               console.error("❌ Error fetching order:", error);
               await sendButtonMessage(
                 from,
-                `❌ *Error*\n\nSorry, there was an error retrieving your order. Please try again or contact support.`,
+                `😊 Maaf kijiye, abhi aapke order ki details nahi mil paayi.
+
+Kripya thodi der baad dobara try karein. Agar dikkat ho toh humari team se baat kar sakte hain.`,
                 [
-                  { id: "track_order", title: "🔍 Try Again" },
-                  { id: "support", title: "💬 Contact Support" },
+                  { id: "track_order", title: "🔍 Dobara Try Karein" },
+                  { id: "support", title: "💬 Team Se Baat Karein" },
                 ],
-                "Error",
+                "Order Details",
               );
               await conversation.setState(from, "menu");
             }
@@ -1737,7 +1767,7 @@ ${validation.errors.map((error) => `• ${error}`).join("\n")}`,
           // Fallback if no recognized state or trigger
           await sendMessage(
             from,
-            "Send 'hi' to start. I can show a menu and help with orders and support.",
+            "👋 Namaste 😊\n\nShuru karne ke liye 'Hi' bhej dijiye.\nMain aapko products, orders aur support mein help kar dunga.",
           );
         }
       }
