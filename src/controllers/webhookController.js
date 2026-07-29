@@ -634,10 +634,10 @@ async function handleIncoming(req, res) {
                 from,
                 `👨‍💼 Theek hai 😊
               
-              Aapki baat hamari team tak pahucha di gayi hai.
-              Jaldi hi hamari team aapse contact karegi.
+Aapki baat hamari team tak pahucha di gayi hai.
+Jaldi hi hamari team aapse contact karegi.
               
-              Bot par wapas aane ke liye kabhi bhi "menu" likh sakte hain.`,
+Bot par wapas aane ke liye kabhi bhi "menu" likh sakte hain.`,
               );
             } else {
               await sendMessage(
