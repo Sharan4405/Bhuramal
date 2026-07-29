@@ -617,7 +617,7 @@ async function handleIncoming(req, res) {
               await conversation.setState(from, "awaiting_order_id");
               await sendMessage(
                 from,
-                '📦 *Track Your Order*\n\nPlease enter your Order ID to check the status.\n\nYou can find the Order ID in your payment confirmation message.\n\nType "menu" to return.',
+                '📦 *Order Track Karein*\n\nApna Order ID bhej dijiye, hum aapke order ki details bata denge.\n\nOrder ID aapko payment confirmation message mein mil jayegi.\n\nMenu par wapas jaane ke liye "menu" type kre.',
               );
             } else if (text === "view_address") {
               await sendStoreLocation(from);
