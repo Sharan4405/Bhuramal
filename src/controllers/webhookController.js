@@ -1561,31 +1561,19 @@ Pehle kuch products add kar lijiye, phir hum checkout ki process aage badhayenge
               // Generate order ID
               const orderId = await Order.generateOrderId();
 
-              // Create order
-              const newOrder = new Order({
+              // prepare order data
+              const orderData = {
                 orderId,
-
                 customerName,
-
                 phoneNumber: from,
-
                 fullAddress,
-
-                // Location details
                 latitude,
-
                 longitude,
-
                 items: cartSummary.items,
-
                 totalItems: cartSummary.totalItems,
-
                 totalAmount: cartSummary.totalAmount,
-
                 status: "pending",
-              });
-
-              await newOrder.save();
+              };
 
               // Update user final data
               await User.findOneAndUpdate(
@@ -1610,7 +1598,7 @@ Pehle kuch products add kar lijiye, phir hum checkout ki process aage badhayenge
 
               // Create payment link
               const paymentResult = await createPaymentLink({
-                orderId: newOrder._id.toString(),
+                orderId: orderData.orderId,
                 amount: cartSummary.totalAmount,
                 customerName: customerName,
                 customerPhone: from,
@@ -1618,10 +1606,13 @@ Pehle kuch products add kar lijiye, phir hum checkout ki process aage badhayenge
               });
 
               if (paymentResult.success) {
-                // Update order with payment link
-                newOrder.paymentLink = paymentResult.paymentLink;
-                newOrder.razorpayOrderId = paymentResult.paymentLinkId;
-                newOrder.paymentStatus = "initiated";
+                const newOrder = new Order({
+                  ...orderData,
+                  paymentLink: paymentResult.paymentLink,
+                  razorpayOrderId: paymentResult.paymentLinkId,
+                  paymentStatus: "pending",
+                });
+
                 await newOrder.save();
 
                 // Format cart items for display
@@ -1671,7 +1662,7 @@ Payment Razorpay ke through bilkul secure hai.`;
 
 Kripya dobara try kijiye. Agar problem bani rahe, to hamari support team aapki madad karegi.
 
-🧾 Order ID: ${newOrder.orderId}`,
+`,
                   [
                     { id: "orders", title: "🔄 Try Again" },
                     { id: "support", title: "💬 Contact Support" },
@@ -1683,8 +1674,8 @@ Kripya dobara try kijiye. Agar problem bani rahe, to hamari support team aapki m
               console.error("❌ Error processing order:", error);
 
               // Clear cart and state
-              await cartService.clearCart(from);
-              await conversation.clearState(from);
+
+              await conversation.setState(from, "menu");
 
               // Notify user of error
               await sendButtonMessage(
@@ -1728,7 +1719,7 @@ Kripya Order ID check karke dobara bhej dijiye. Agar koi dikkat ho toh humari te
 
               // Status emoji mapping
               const statusDisplay = {
-                pending: "🛒 Order placed",
+                pending: "⏳ Payment Pending",
                 confirmed: "✅ Payment confirmed",
                 processing: "📦 Preparing",
                 shipped: "🚚 Shipped",

@@ -103,14 +103,20 @@ async function sendStoreLocation(from) {
 
   await sendUrlButton(
     from,
-    `📍 *Store Ka Address*
-
-${STORE_ADDRESS}
-
-Neeche button se Google Maps par location dekh sakte hain 😊`,
-    "📍 Location Open Karein",
+    `📍 *Store ka Address*\n${STORE_ADDRESS}\n\nNeeche button se Google Maps par location dekh sakte hain.`,
+    "View Location",
     mapsLink,
-    "📍 Address",
+    "📍 Location",
+  );
+  await sendButtonMessage(
+    from,
+    "Aur agar aap main menu par wapas jana chahte hain to neeche diye gaye button ka use karein.",
+    [
+      {
+        id: "main_menu",
+        title: "🏠 Main Menu",
+      },
+    ],
   );
 }
 
@@ -150,11 +156,11 @@ async function showOrderCategories(from) {
   const categories = await catalog.getCategories();
   const sections = [
     {
-      title: "Category Choose Karein",
+      title: "Available Categories",
       rows: categories.map((cat, idx) => ({
         id: `order_cat_${idx}`,
         title: cat,
-        description: "Products Dekhein",
+        description: `View products`,
       })),
     },
     {
@@ -162,8 +168,8 @@ async function showOrderCategories(from) {
       rows: [
         {
           id: "main_menu",
-          title: "↩️ Wapas Menu Par",
-          description: "Main menu",
+          title: "↩️ Back to Main Menu",
+          description: "Return to main menu",
         },
       ],
     },
@@ -503,7 +509,7 @@ async function handleIncoming(req, res) {
           if (!text) {
             await sendMessage(
               from,
-              "😊 Maaf kijiye, main ye message samajh nahi paaya.\nKripya text bhejein, location share karein ya diye gaye options mein se select karein.",
+              "Sorry, I can only process text messages and button selections.",
             );
             continue;
           }
@@ -605,7 +611,7 @@ async function handleIncoming(req, res) {
               await sendMessage(
                 from,
                 `⏱️ Lagta hai kaafi der ho gayi hai 😊
-
+              
 Aapka pichla selection save nahi reh paaya. Koi baat nahi, chaliye dobara shuru karte hain.`,
               );
               await navigateToMenu(from);
@@ -623,13 +629,7 @@ Aapka pichla selection save nahi reh paaya. Koi baat nahi, chaliye dobara shuru 
               await conversation.setState(from, "awaiting_order_id");
               await sendMessage(
                 from,
-                `📦 *Order Track Karein*
-
-Apna Order ID bhej dijiye, hum aapke order ki details bata denge 😊
-
-Order ID aapko payment confirmation message mein mil jayegi.
-
-Menu par wapas jaane ke liye "menu" likhein.`,
+                '📦 *Order Track Karein*\n\nApna Order ID bhej dijiye, hum aapke order ki details bata denge.\n\nOrder ID aapko payment confirmation message mein mil jayegi.\n\nMenu par wapas jaane ke liye "menu" type kre.',
               );
             } else if (text === "view_address") {
               await sendStoreLocation(from);
@@ -645,11 +645,12 @@ Menu par wapas jaane ke liye "menu" likhein.`,
               await sendMessage(
                 from,
                 `👨‍💼 Theek hai 😊
-
+              
 Aapki baat hamari team tak pahucha di gayi hai.
-Jaldi hi hamari team aapse contact karegi.
 
-Bot par wapas aane ke liye kabhi bhi "menu" likh sakte hain.`,
+Jaldi hi hamari team aapse contact karegi.
+              
+Main menu par wapas aane ke liye kabhi bhi "menu" likh sakte hain.`,
               );
             } else {
               await sendMessage(
@@ -778,8 +779,7 @@ Apni pasand ke products add kijiye aur phir checkout kijiye.`,
               if (!cart.items || cart.items.length === 0) {
                 await sendButtonMessage(
                   from,
-                  "🛒 Aapka cart abhi empty hai.\n\nKuch items add karke shopping start karein 😊",
-
+                  "🛒 Aapka cart abhi empty hai.\n\nKuch items add karke shopping start karein ",
                   [{ id: "orders", title: "🛒 Start Shopping" }],
                 );
                 await conversation.setState(from, "menu");
@@ -808,7 +808,7 @@ Apni pasand ke products add kijiye aur phir checkout kijiye.`,
                     {
                       id: "view_cart",
                       title: "↩️ Back to Cart",
-                      description: "Kuch change nahi karna",
+                      description: "Cancel",
                     },
                   ],
                 },
@@ -816,9 +816,9 @@ Apni pasand ke products add kijiye aur phir checkout kijiye.`,
 
               await sendListMessage(
                 from,
-                `✏️ Kaunsa item change karna hai?\n\nNeeche se item select kar dijiye, aap quantity ya packet size update kar sakte hain 😊`,
+                `✏️ Kaunsa item change karna hai?\n\nNeeche se item select kar dijiye, aap quantity ya packet size update kar sakte hain `,
                 sections,
-                "Item Select Karein",
+                "Select Item",
               );
               await conversation.setState(from, "select_item_to_edit");
               continue;
@@ -869,8 +869,8 @@ Rajasthan
               await cartService.clearCart(from);
               await sendButtonMessage(
                 from,
-                "✅ Aapka cart khali kar diya gaya hai.\n\nAgar dobara kuch order karna ho toh neeche se start kar sakte hain 😊",
-                [{ id: "orders", title: "🛒 Shopping Shuru Karein" }],
+                "✅ Aapka cart khali kar diya gaya hai.\n\nAgar dobara kuch order karna ho toh neeche se start kar sakte hain",
+                [{ id: "orders", title: "🛒 Start Shopping" }],
               );
               await conversation.setState(from, "menu");
               continue;
@@ -895,7 +895,7 @@ Rajasthan
               if (!item) {
                 await sendMessage(
                   from,
-                  "Maaf kijiye 😊 Ye item nahi mil paaya. Kripya dobara try karein.",
+                  "Maaf kijiye 😊 Ye item nahi mil paaya.",
                 );
                 continue;
               }
@@ -927,8 +927,8 @@ Rajasthan
                   rows: [
                     {
                       id: "view_cart",
-                      title: "↩️ Wapas Cart Par",
-                      description: "Koi change nahi karna",
+                      title: "↩️ Back to Cart",
+                      description: "Cancel",
                     },
                   ],
                 },
@@ -936,13 +936,9 @@ Rajasthan
 
               await sendListMessage(
                 from,
-                `✏️ ${item.name} ki quantity change karni hai?\n\nAbhi: ${
-                  item.unit === "grams"
-                    ? `${item.weight}g`
-                    : `${item.quantity} ${item.unit}`
-                }\n\nKitni quantity chahiye, neeche se select kar dijiye 😊`,
+                `✏️ *Edit: ${item.name}*\n\nAbhi: ${item.unit === "grams" ? `${item.weight}g` : `${item.quantity} ${item.unit}`}\n\nKitni quantity chahiye, neeche se select kar dijiye`,
                 sections,
-                "Quantity Select Karein",
+                "Select Quantity",
               );
               await conversation.setState(from, "update_item_quantity", {
                 itemIndex,
@@ -979,13 +975,13 @@ Rajasthan
               // Ask for packet count
               await sendMessage(
                 from,
-                `✅ *${packetSize}g* wala pack select ho gaya 😊
+                `✅ *${packetSize}g* wala pack select ho gaya.
 
 📦 Ab kitne packets chahiye?
 
 👇 Sirf number type karke bata dijiye.
 
-*Example:*
+Example:
 1
 2
 5
@@ -1011,9 +1007,9 @@ Rajasthan
               await sendMessage(
                 from,
                 `😊 Samajh nahi aaya.
-
+              
 Packet ki quantity number mein bhej dijiye.
-
+              
 *Example:*
 1
 2
@@ -1037,14 +1033,11 @@ Packet ki quantity number mein bhej dijiye.
             if (result.success) {
               await sendMessage(
                 from,
-                "✅ Theek hai, quantity update kar di gayi hai 😊",
+                "✅ Theek hai, quantity update kar di gayi hai",
               );
               await showCartWithOptions(from);
             } else {
-              await sendMessage(
-                from,
-                "❌ Maaf kijiye, quantity update nahi ho paayi. Kripya dobara try karein.",
-              );
+              await sendMessage(from, "❌ Error updating cart.");
             }
 
             continue;
@@ -1074,7 +1067,7 @@ Packet ki quantity number mein bhej dijiye.
             } else {
               await sendMessage(
                 from,
-                "😊 Maaf kijiye, ye category samajh nahi aayi.\nKripya diye gaye options mein se category select kar dijiye.",
+                "Invalid category. Please select from the list above.",
               );
             }
             continue;
@@ -1132,10 +1125,7 @@ Packet ki quantity number mein bhej dijiye.
             const selectedCategory = stateData?.metadata?.selectedCategory;
 
             if (!selectedCategory) {
-              await sendMessage(
-                from,
-                "😊 Aapka pichla selection continue nahi ho paaya.\nChaliye, dobara menu se shuru karte hain.",
-              );
+              await sendMessage(from, "Session expired. Please start over.");
               await navigateToMenu(from);
               continue;
             }
@@ -1363,9 +1353,9 @@ ${await cartService.formatCartSummary(from)}
 
 Ab batayein, aage kya karna chahenge?`,
               [
-                { id: "add_more", title: "➕ Add More Items" },
-                { id: "view_cart", title: "🛒 View Cart" },
-                { id: "checkout", title: "💳 Checkout" },
+                { id: "add_more", title: "Add More Items" },
+                { id: "view_cart", title: "View Cart" },
+                { id: "checkout", title: "Checkout" },
               ],
             );
 
@@ -1446,11 +1436,11 @@ Kripya upar diye gaye options me se kisi ek ko select kijiye.`,
                 await sendMessage(
                   from,
                   `Delivery se pehle hume aapka complete address chahiye.
-
+                
 Kripya pehle apna poora address bhej dijiye.
-
+                
 Example:
-
+                
 House No. 21
 Vaishali Nagar
 Jaipur
@@ -1466,7 +1456,7 @@ Rajasthan
                 await sendMessage(
                   from,
                   `Lagta hai location sahi se receive nahi ho paayi.
-
+                
 Kripya dobara apni current location share kar dijiye.`,
                 );
 
@@ -1542,10 +1532,10 @@ Location share karne ke liye:
               await sendMessage(
                 from,
                 `Address abhi complete nahi lag raha.
-
+              
 Kripya niche di gayi details check karke dobara bhej dijiye.
-
-${validation.errors.map((error) => `• ${error}`).join("\n")}`,
+              
+              ${validation.errors.map((error) => `• ${error}`).join("\n")}`,
               );
 
               continue;
@@ -1664,6 +1654,8 @@ Payment Razorpay ke through bilkul secure hai.`;
                 );
                 // reset conversation state
                 await conversation.setState(from, "menu");
+                console.log("State changed to menu");
+                console.log(await conversation.getState(from));
 
                 // Note: Cart will be cleared after successful payment in payment webhook
               } else {
@@ -1694,6 +1686,7 @@ Kripya dobara try kijiye. Agar problem bani rahe, to hamari support team aapki m
               await cartService.clearCart(from);
               await conversation.clearState(from);
 
+              // Notify user of error
               await sendButtonMessage(
                 from,
                 `Maaf kijiye, aapka order process karte waqt ek dikkat aa gayi.
@@ -1756,7 +1749,7 @@ Kripya Order ID check karke dobara bhej dijiye. Agar koi dikkat ho toh humari te
 
               // Send with buttons in one message
               await sendButtonMessage(from, statusMsg, [
-                { id: "track_order", title: "🔍 Aur Order Track Karein" },
+                { id: "track_order", title: "🔍 Track Another" },
                 { id: "main_menu", title: "🏠 Main Menu" },
               ]);
 
