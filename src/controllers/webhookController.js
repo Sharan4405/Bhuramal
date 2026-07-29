@@ -600,7 +600,9 @@ async function handleIncoming(req, res) {
             if (metadata && metadata.expired) {
               await sendMessage(
                 from,
-                `⏱️ *Session Expired*\n\nYour previous session has expired due to inactivity.\n\nPlease start a new order from the menu below.`,
+                `⏱️ Lagta hai kaafi der ho gayi hai 😊
+              
+Aapka pichla selection save nahi reh paaya. Koi baat nahi, chaliye dobara shuru karte hain.`,
               );
               await navigateToMenu(from);
             } else {
@@ -635,6 +637,7 @@ async function handleIncoming(req, res) {
                 `👨‍💼 Theek hai 😊
               
 Aapki baat hamari team tak pahucha di gayi hai.
+
 Jaldi hi hamari team aapse contact karegi.
               
 Bot par wapas aane ke liye kabhi bhi "menu" likh sakte hain.`,
@@ -699,7 +702,9 @@ Bot par wapas aane ke liye kabhi bhi "menu" likh sakte hain.`,
             if (isEmpty) {
               await sendButtonMessage(
                 from,
-                "🛒 Your cart is empty.\n\nAdd items first!",
+                `Lagta hai aapka cart abhi khaali hai.
+
+Pehle apni pasand ke products add kar lijiye, phir hum checkout ki process aage badhayenge.`,
                 [{ id: "orders", title: "🛒 Start Shopping" }],
               );
               await conversation.setState(from, "menu");
@@ -707,11 +712,11 @@ Bot par wapas aane ke liye kabhi bhi "menu" likh sakte hain.`,
               await conversation.setState(from, "address_input");
               await sendMessage(
                 from,
-                `📍 *Delivery Address Required*
+                `Delivery ke liye hume aapka complete address chahiye.
 
-Please provide your complete delivery address.
+Kripya apna poora delivery address bhej dijiye.
 
-Your address should include:
+Address me ye details zarur honi chahiye:
 
 🏠 House / Flat / Plot Number
 📍 Area / Locality
@@ -738,14 +743,19 @@ Rajasthan
               if (await cartService.isEmpty(from)) {
                 await sendButtonMessage(
                   from,
-                  "🛒 Your cart is empty.\n\nStart shopping to add items!",
+                  `Aapka cart abhi khaali hai.
+
+Apni pasand ke products add kijiye aur phir checkout kijiye.`,
                   [{ id: "orders", title: "🛒 Start Shopping" }],
                 );
               } else {
                 await showCartWithOptions(from);
               }
             } else {
-              await sendMessage(from, "Please use the buttons above.");
+              await sendMessage(
+                from,
+                "Kripya upar diye gaye options me se kisi ek ko choose kijiye.",
+              );
             }
             continue;
           }
@@ -759,7 +769,7 @@ Rajasthan
               if (!cart.items || cart.items.length === 0) {
                 await sendButtonMessage(
                   from,
-                  "🛒 Your cart is empty.\n\nStart shopping to add items!",
+                  "🛒 Aapka cart abhi empty hai.\n\nKuch items add karke shopping start karein ",
                   [{ id: "orders", title: "🛒 Start Shopping" }],
                 );
                 await conversation.setState(from, "menu");
@@ -768,7 +778,7 @@ Rajasthan
 
               const sections = [
                 {
-                  title: "Select Item to Edit",
+                  title: "Item Choose Karein",
                   rows: cart.items.map((item, idx) => {
                     const weight =
                       item.unit === "grams"
@@ -823,11 +833,9 @@ Rajasthan
               await conversation.setState(from, "address_input");
               await sendMessage(
                 from,
-                `📍 *Delivery Address Required*
+                `📍 Order deliver karne ke liye apna address bhej dijiye 😊
 
-Please provide your complete delivery address.
-
-Your address should include:
+Address mein ye details zaroor likh dein:
 
 🏠 House / Flat / Plot Number
 📍 Area / Locality
@@ -849,15 +857,20 @@ Rajasthan
             // Handle clear cart
             if (text === "clear_cart") {
               await cartService.clearCart(from);
-              await sendButtonMessage(from, "✅ Cart cleared successfully!", [
-                { id: "orders", title: "🛒 Start Shopping" },
-              ]);
+              await sendButtonMessage(
+                from,
+                "✅ Aapka cart khali kar diya gaya hai.",
+                [{ id: "orders", title: "🛒 Start Shopping" }],
+              );
               await conversation.setState(from, "menu");
               continue;
             }
 
             // If unrecognized action
-            await sendMessage(from, "Please use the options above.");
+            await sendMessage(
+              from,
+              "Maaf kijiye, main samajh nahi paaya 😊\nKripya diye gaye options mein se koi ek select kar dijiye.",
+            );
             continue;
           }
 
