@@ -859,7 +859,7 @@ Rajasthan
               await cartService.clearCart(from);
               await sendButtonMessage(
                 from,
-                "✅ Aapka cart khali kar diya gaya hai.",
+                "✅ Aapka cart khali kar diya gaya hai.\n\nAgar dobara kuch order karna ho toh neeche se start kar sakte hain",
                 [{ id: "orders", title: "🛒 Start Shopping" }],
               );
               await conversation.setState(from, "menu");
