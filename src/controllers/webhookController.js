@@ -108,6 +108,16 @@ async function sendStoreLocation(from) {
     mapsLink,
     "📍 Location",
   );
+  await sendButtonMessage(
+    from,
+    "Aur agar aap main menu par wapas jana chahte hain to neeche diye gaye button ka use karein.",
+    [
+      {
+        id: "main_menu",
+        title: "🏠 Main Menu",
+      },
+    ],
+  );
 }
 
 // Helper to send main menu
@@ -640,7 +650,7 @@ Aapki baat hamari team tak pahucha di gayi hai.
 
 Jaldi hi hamari team aapse contact karegi.
               
-Bot par wapas aane ke liye kabhi bhi "menu" likh sakte hain.`,
+Main menu par wapas aane ke liye kabhi bhi "menu" likh sakte hain.`,
               );
             } else {
               await sendMessage(
