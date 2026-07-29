@@ -592,6 +592,16 @@ async function handleIncoming(req, res) {
             continue;
           }
 
+          // Retry checkout globally
+          if (text === "retry_checkout") {
+            await cartService.clearCart(from);
+
+            await conversation.setState(from, "menu");
+
+            await showMainMenu(from);
+
+            continue;
+          }
           // Global: address/location queries from any state (single interactive message)
           if (
             /\b(address|location|where\s+are\s+you|store\s+location|shop\s+address|map)\b/i.test(
@@ -828,18 +838,6 @@ Apni pasand ke products add kijiye aur phir checkout kijiye.`,
             if (text === "main_menu") {
               await showMainMenu(from);
               await conversation.setState(from, "menu");
-              continue;
-            }
-
-            // Retry checkout after payment link failure
-            if (text === "retry_checkout") {
-              // Clear previous cart
-              await cartService.clearCart(from);
-
-              await conversation.setState(from, "menu");
-
-              await showMainMenu(from);
-
               continue;
             }
 
