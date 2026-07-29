@@ -88,7 +88,7 @@ async function navigateToSupport(from) {
   await conversation.setState(from, "support_menu");
   await sendButtonMessage(
     from,
-    "💬 *Support & Queries*\n\nHow can we help you today?",
+    "💬 *Support & Queries*\n\nBatayein, aapko kis cheez mein madad chahiye?",
     SUPPORT_MENU.buttons,
   );
 }
@@ -103,7 +103,7 @@ async function sendStoreLocation(from) {
 
   await sendUrlButton(
     from,
-    `📍 *Store Address*\n${STORE_ADDRESS}\n\nTap the button below to open the location in Google Maps.`,
+    `📍 *Store ka Address*\n${STORE_ADDRESS}\n\nNeeche button se Google Maps par location dekh sakte hain.`,
     "View Location",
     mapsLink,
     "📍 Location",
