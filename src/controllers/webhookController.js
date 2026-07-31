@@ -850,10 +850,42 @@ Apni pasand ke products add kijiye aur phir checkout kijiye.`,
 
             // Handle checkout
             if (text === "checkout") {
-              await conversation.setState(from, "address_input");
-              await sendMessage(
-                from,
-                `📍 Order deliver karne ke liye apna address bhej dijiye 😊
+              const existingUser = await User.findOne({
+                phoneNumber: from,
+              });
+
+              if (
+                existingUser?.fullAddress &&
+                existingUser?.latitude &&
+                existingUser?.longitude
+              ) {
+                await conversation.setState(from, "address_confirmation");
+
+                await sendButtonMessage(
+                  from,
+                  `📍 Aapne pehle is address par order receive kiya tha:
+
+${existingUser.fullAddress}
+
+Kya aap isi address par delivery karwana chahenge?`,
+                  [
+                    {
+                      id: "use_saved_address",
+                      title: "✅ Same Address",
+                    },
+                    {
+                      id: "new_address",
+                      title: "✏️ New Address",
+                    },
+                  ],
+                  "Delivery Address",
+                );
+              } else {
+                await conversation.setState(from, "address_input");
+
+                await sendMessage(
+                  from,
+                  `📍 Order deliver karne ke liye apna address bhej dijiye 😊
 
 Address mein ye details zaroor likh dein:
 
@@ -870,10 +902,11 @@ Vaishali Nagar
 Jaipur
 Rajasthan
 302021`,
-              );
+                );
+              }
+
               continue;
             }
-
             // Handle clear cart
             if (text === "clear_cart") {
               await cartService.clearCart(from);
@@ -1429,8 +1462,218 @@ Kripya upar diye gaye options me se kisi ek ko select kijiye.`,
             continue;
           }
 
-          // Address input
+          if (state === "address_confirmation") {
+            if (text === "new_address") {
+              await conversation.setState(from, "address_input");
+
+              await sendMessage(
+                from,
+                `📍 Order deliver karne ke liye apna address bhej dijiye 😊
+
+Address mein ye details zaroor likh dein:
+
+🏠 House / Flat / Plot Number
+📍 Area / Locality
+🏙️ City
+🗺️ State
+📮 6-digit PIN Code
+
+Example:
+
+House No. 21
+Vaishali Nagar
+Jaipur
+Rajasthan
+302021`,
+              );
+
+              continue;
+            }
+
+            if (text === "use_saved_address") {
+              const existingUser = await User.findOne({
+                phoneNumber: from,
+              });
+
+              const customerName =
+                userName || existingUser.customerName || "Customer";
+
+              const fullAddress = existingUser.fullAddress;
+              const latitude = existingUser.latitude;
+              const longitude = existingUser.longitude;
+
+              // Final validation before order creation
+              const validation = validateAddress(fullAddress);
+
+              if (!validation.valid) {
+                await sendMessage(
+                  from,
+                  `Address abhi complete nahi lag raha.
+
+Kripya niche di gayi details check karke dobara bhej dijiye.
+
+${validation.errors.map((error) => `• ${error}`).join("\n")}`,
+                );
+
+                continue;
+              }
+
+              // Get cart summary
+              const cartSummary = await cartService.getCartSummary(from);
+
+              if (cartSummary.items.length === 0) {
+                await sendMessage(
+                  from,
+                  `🛒 Aapka cart abhi khaali hai.
+
+Pehle kuch products add kar lijiye, phir hum checkout ki process aage badhayenge.`,
+                );
+
+                await navigateToMenu(from);
+                continue;
+              }
+              try {
+                // Generate order ID
+                const orderId = await Order.generateOrderId();
+
+                // prepare order data
+                const orderData = {
+                  orderId,
+                  customerName,
+                  phoneNumber: from,
+                  fullAddress,
+                  latitude,
+                  longitude,
+                  items: cartSummary.items,
+                  totalItems: cartSummary.totalItems,
+                  totalAmount: cartSummary.totalAmount,
+                  status: "pending",
+                };
+
+                // Update user final data
+                await User.findOneAndUpdate(
+                  {
+                    phoneNumber: from,
+                  },
+
+                  {
+                    $set: {
+                      customerName,
+                      fullAddress,
+                      latitude,
+                      longitude,
+                    },
+                  },
+                );
+
+                // Create order description for payment
+                const itemsDescription = cartSummary.items
+                  .map(
+                    (item) => `${item.quantity}x ${item.weight}g ${item.name}`,
+                  )
+                  .join(", ");
+
+                // Create payment link
+                const paymentResult = await createPaymentLink({
+                  orderId: orderData.orderId,
+                  amount: cartSummary.totalAmount,
+                  customerName: customerName,
+                  customerPhone: from,
+                  description: itemsDescription.substring(0, 100), // Razorpay has 100 char limit
+                });
+
+                if (paymentResult.success) {
+                  const newOrder = new Order({
+                    ...orderData,
+                    paymentLink: paymentResult.paymentLink,
+                    razorpayOrderId: paymentResult.paymentLinkId,
+                    paymentStatus: "pending",
+                  });
+
+                  await newOrder.save();
+
+                  // Format cart items for display
+                  let itemsList = "";
+                  cartSummary.items.forEach((item, index) => {
+                    itemsList += `${index + 1}. ${item.quantity} x ${item.name} (${item.weight} ${item.unit})\n   ₹${item.totalPrice.toFixed(2)}\n`;
+                  });
+
+                  // Send payment button with order summary
+                  const orderSummary = `📦 *Aapke order ki details*
+
+${itemsList}
+💰 *Total Amount: ₹${cartSummary.totalAmount.toFixed(2)}*
+
+📍 *Delivery Address:*
+${fullAddress}
+
+🧾 Order ID: ${newOrder.orderId}
+
+Neeche diye gaye button par tap karke payment complete kar dijiye.
+
+Payment Razorpay ke through bilkul secure hai.`;
+
+                  await sendUrlButton(
+                    from,
+                    orderSummary,
+                    "Proceed to Payment",
+                    paymentResult.paymentLink,
+                    "💰 Payment Required",
+                  );
+                  // reset conversation state
+                  await conversation.setState(from, "menu");
+                  console.log("State changed to menu");
+                  console.log(await conversation.getState(from));
+
+                  // Note: Cart will be cleared after successful payment in payment webhook
+                } else {
+                  // Payment link creation failed
+                  console.error(
+                    "❌ Payment link creation failed:",
+                    paymentResult.error,
+                  );
+                  await conversation.setState(from, "menu");
+                  await sendButtonMessage(
+                    from,
+                    `Maaf kijiye, payment link banane me thodi dikkat aa gayi.
+
+Kripya dobara try kijiye. Agar problem bani rahe, to hamari support team aapki madad karegi.
+
+`,
+                    [
+                      { id: "retry_checkout", title: "🔄 Try Again" },
+                      { id: "support", title: "💬 Contact Support" },
+                    ],
+                    "Payment",
+                  );
+                }
+              } catch (error) {
+                console.error("❌ Error processing order:", error);
+
+                // Clear cart and state
+
+                await conversation.setState(from, "menu");
+
+                // Notify user of error
+                await sendButtonMessage(
+                  from,
+                  `Maaf kijiye, aapka order process karte waqt ek dikkat aa gayi.
+
+Kripya thodi der baad dobara try kijiye. Agar problem bani rahe, to hamari support team se sampark kar sakte hain.`,
+                  [
+                    { id: "retry_checkout", title: "🔄 Try Again" },
+                    { id: "support", title: "💬 Contact Support" },
+                  ],
+                  "Error",
+                );
+              }
+            }
+
+            continue;
+          }
+
           if (state === "address_input") {
+            // Address input
             let fullAddress = "";
 
             const customerName = userName || user.customerName || "Customer";
