@@ -716,7 +716,10 @@ Main menu par wapas aane ke liye kabhi bhi "menu" likh sakte hain.`,
           }
 
           // Handle checkout from reminder (can be clicked from any state)
-          if (text === "checkout" && state !== "view_cart_options") {
+          if (
+            text === "checkout" &&
+            !["view_cart_options", "cart_options"].includes(state)
+          ) {
             // Direct checkout from reminder
             const isEmpty = await cartService.isEmpty(from);
             if (isEmpty) {
