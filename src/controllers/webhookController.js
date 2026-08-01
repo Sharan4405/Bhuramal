@@ -1416,12 +1416,44 @@ Ab batayein, aage kya karna chahenge?`,
               await showOrderCategories(from);
               await conversation.setState(from, "ordering");
             } else if (text === "checkout") {
-              await conversation.setState(from, "address_input");
-              await sendMessage(
-                from,
-                `Delivery ke liye hume aapka complete address chahiye.
+              const existingUser = await User.findOne({
+                phoneNumber: from,
+              });
 
-Kripya apna poora address bhej dijiye, jisme ye details zarur honi chahiye:
+              if (
+                existingUser?.fullAddress &&
+                existingUser?.latitude &&
+                existingUser?.longitude
+              ) {
+                await conversation.setState(from, "address_confirmation");
+
+                await sendButtonMessage(
+                  from,
+                  `📍 Aapne pehle is address par order receive kiya tha:
+
+${existingUser.fullAddress}
+
+Kya aap isi address par delivery karwana chahenge?`,
+                  [
+                    {
+                      id: "use_saved_address",
+                      title: "✅ Same Address",
+                    },
+                    {
+                      id: "new_address",
+                      title: "✏️ New Address",
+                    },
+                  ],
+                  "Delivery Address",
+                );
+              } else {
+                await conversation.setState(from, "address_input");
+
+                await sendMessage(
+                  from,
+                  `📍 Order deliver karne ke liye apna address bhej dijiye 😊
+
+Address mein ye details zaroor likh dein:
 
 🏠 House / Flat / Plot Number
 📍 Area / Locality
@@ -1436,7 +1468,8 @@ Vaishali Nagar
 Jaipur
 Rajasthan
 302021`,
-              );
+                );
+              }
             } else if (text === "view_cart") {
               // Show full cart with options to edit quantities
               if (await cartService.isEmpty(from)) {
@@ -1444,7 +1477,7 @@ Rajasthan
                   from,
                   `Aapka cart abhi khaali hai.
 
-Chaliye, shopping shuru karte hain! 😊`,
+  Chaliye, shopping shuru karte hain! 😊`,
                   [{ id: "orders", title: "🛒 Start Shopping" }],
                 );
                 await conversation.setState(from, "menu");
@@ -1456,7 +1489,7 @@ Chaliye, shopping shuru karte hain! 😊`,
                 from,
                 `Maaf kijiye, "${text}" option samajh nahi aaya.
 
-Kripya upar diye gaye options me se kisi ek ko select kijiye.`,
+  Kripya upar diye gaye options me se kisi ek ko select kijiye.`,
               );
             }
             continue;
