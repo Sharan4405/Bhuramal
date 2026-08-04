@@ -1010,12 +1010,11 @@ Packet ki quantity number mein bhej dijiye.
 
             const stateData = await conversation.getState(from, true);
 
-            const { itemIndex, packetSize } = stateData.metadata;
+            const { itemIndex } = stateData.metadata;
 
             const result = await cartService.updateItemQuantity(
               from,
               itemIndex,
-              packetSize,
               packets,
             );
 
