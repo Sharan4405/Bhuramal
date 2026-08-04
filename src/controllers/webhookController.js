@@ -829,7 +829,9 @@ Apni pasand ke products add kijiye aur phir checkout kijiye.`,
 
               await sendListMessage(
                 from,
-                `✏️ Kaunsa item change karna hai?\n\nNeeche se item select kar dijiye, aap quantity ya packet size update kar sakte hain `,
+                `✏️ Kaunsa item change karna hai?
+
+Neeche se item select kijiye. Aap us item ke packets ki quantity update kar sakte hain.`,
                 sections,
                 "Select Item",
               );
@@ -946,82 +948,18 @@ Rajasthan
                 continue;
               }
 
-              // Show quantity options for the selected item
-              const quantityOptions =
-                item.unit === "grams" ? [250, 500, 1000] : [1, 2, 3, 5];
+              // Selected item ki existing packing aur quantity ko maintain rakho
+              const packetSize =
+                item.unit === "grams"
+                  ? `${item.weight}g`
+                  : `${item.weight} ${item.unit}`;
 
-              const sections = [
-                {
-                  title: "Kitni Quantity Chahiye?",
-                  rows: quantityOptions.map((qty) => {
-                    // Calculate price based on item's existing unit price
-                    const price =
-                      item.unit === "grams"
-                        ? (item.totalPrice / item.weight) * qty
-                        : item.unitPrice * qty;
-                    const label =
-                      item.unit === "grams" ? `${qty}g` : `${qty} ${item.unit}`;
-                    return {
-                      id: `update_qty_${itemIndex}_${qty}`,
-                      title: label,
-                      description: `₹${price.toFixed(2)}`,
-                    };
-                  }),
-                },
-                {
-                  title: "Navigation",
-                  rows: [
-                    {
-                      id: "view_cart",
-                      title: "↩️ Back to Cart",
-                      description: "Cancel",
-                    },
-                  ],
-                },
-              ];
-
-              await sendListMessage(
-                from,
-                `✏️ *Edit: ${item.name}*\n\nAbhi: ${item.unit === "grams" ? `${item.weight}g` : `${item.quantity} ${item.unit}`}\n\nKitni quantity chahiye, neeche se select kar dijiye`,
-                sections,
-                "Select Quantity",
-              );
-              await conversation.setState(from, "update_item_quantity", {
-                itemIndex,
-              });
-              continue;
-            }
-
-            // Handle back to cart
-            if (text === "view_cart") {
-              await showCartWithOptions(from);
-              continue;
-            }
-            continue;
-          }
-
-          // Update item quantity handler
-          if (state === "update_item_quantity") {
-            const stateData = await conversation.getState(from, true);
-            const itemIndex = stateData?.metadata?.itemIndex;
-
-            // Handle quantity update
-            if (text.startsWith("update_qty_")) {
-              const parts = text.split("_");
-
-              const idx = parseInt(parts[2]);
-              const packetSize = parseInt(parts[3]);
-
-              // Save selected packet size
-              await conversation.setState(from, "edit_packet_quantity", {
-                itemIndex: idx,
-                packetSize,
-              });
-
-              // Ask for packet count
               await sendMessage(
                 from,
-                `✅ *${packetSize}g* wala pack select ho gaya.
+                `✏️ *${item.name}*
+
+📦 Packing: ${packetSize}
+🔢 Abhi cart mein: ${item.quantity} packet(s)
 
 📦 Ab kitne packets chahiye?
 
@@ -1033,6 +971,11 @@ Example:
 5
 10`,
               );
+
+              await conversation.setState(from, "edit_packet_quantity", {
+                itemIndex,
+                packetSize: Number(item.weight),
+              });
 
               continue;
             }
@@ -1193,60 +1136,38 @@ Packet ki quantity number mein bhej dijiye.
             }
 
             if (selectedItem) {
-              await conversation.setState(from, "quantity_input", {
-                selectedItem: selectedItem,
-                selectedCategory: selectedCategory,
+              const packetSize =
+                selectedItem.unit === "grams"
+                  ? `${selectedItem.weight}g`
+                  : `${selectedItem.weight} ${selectedItem.unit}`;
+
+              const unitPrice = Number(selectedItem.price);
+
+              // Save selected item and directly move to packet quantity
+              await conversation.setState(from, "packet_quantity", {
+                selectedItem,
+                selectedCategory,
+                packetSize: Number(selectedItem.weight),
+                unitPrice,
               });
 
-              // Get price breakdown for display
-              const breakdown = getPriceBreakdown(selectedItem);
-
-              // Calculate prices for each quantity option
-              const price250 = calculatePrice(selectedItem, 250);
-              const price500 = calculatePrice(selectedItem, 500);
-              const price1000 = calculatePrice(selectedItem, 1000);
-
-              const sections = [
-                {
-                  title: "Kitni quantity chahiye?",
-                  rows: [
-                    {
-                      id: "qty_250",
-                      title: "250 gm",
-                      description: `₹${price250.toFixed(2)}`,
-                    },
-                    {
-                      id: "qty_500",
-                      title: "500 gm",
-                      description: `₹${price500.toFixed(2)}`,
-                    },
-                    {
-                      id: "qty_1000",
-                      title: "1 kg",
-                      description: `₹${price1000.toFixed(2)}`,
-                    },
-                  ],
-                },
-                {
-                  title: "More Options",
-                  rows: [
-                    {
-                      id: "go_back_items",
-                      title: "↩️ Back to Products",
-                      description: "Dusra product dekhein",
-                    },
-                  ],
-                },
-              ];
-
-              await sendListMessage(
+              // Ask only for number of packets
+              await sendMessage(
                 from,
-                `📦 *${selectedItem.name}*\n\n` +
-                  `💰 ${selectedItem.weight} ${selectedItem.unit} - ₹${selectedItem.price}\n` +
-                  `📊 Price per kg: ₹${breakdown.pricePerKg}\n\n` +
-                  `👇 Ab batayein, kitni quantity chahiye?`,
-                sections,
-                "Select Quantity",
+                `📦 *${selectedItem.name}*
+
+Packing: ${packetSize}
+Price: ₹${unitPrice.toFixed(2)} per packet
+
+📦 Ab kitne packets chahiye?
+
+👇 Sirf number type karke bata dijiye.
+
+Example:
+1
+2
+5
+10`,
               );
             } else {
               await sendMessage(
@@ -1254,84 +1175,6 @@ Packet ki quantity number mein bhej dijiye.
                 "😅 Ye product samajh nahi aaya.\n\n👇 Kripya upar di gayi list me se hi koi product select kijiye.",
               );
             }
-            continue;
-          }
-
-          // Quantity input (in grams)
-          if (state === "quantity_input") {
-            // Handle go back to item selection
-            if (text === "go_back_items" || textLower === "back") {
-              const stateData = await conversation.getState(from, true);
-              const selectedCategory = stateData?.metadata?.selectedCategory;
-              if (selectedCategory) {
-                const categoryItems =
-                  await catalog.getItemsByCategory(selectedCategory);
-                await showCategoryItems(from, selectedCategory, categoryItems);
-                await conversation.setState(from, "selecting_item", {
-                  selectedCategory,
-                });
-              } else {
-                await showOrderCategories(from);
-                await conversation.setState(from, "ordering");
-              }
-              continue;
-            }
-
-            // Parse quantity from list selection
-            let gramsRequested = 0;
-            if (text === "qty_250") {
-              gramsRequested = 250;
-            } else if (text === "qty_500") {
-              gramsRequested = 500;
-            } else if (text === "qty_1000") {
-              gramsRequested = 1000;
-            } else {
-              await sendMessage(
-                from,
-                "😊 Quantity samajh nahi aayi.\n\n👇 Kripya upar di gayi list me se hi apni quantity select kijiye.",
-              );
-              continue;
-            }
-
-            const stateData = await conversation.getState(from, true);
-            const selectedItem = stateData?.metadata?.selectedItem;
-
-            if (!selectedItem) {
-              await sendMessage(
-                from,
-                "😔 Lagta hai aapka session expire ho gaya hai.\n\nChaliye, dobara shuru karte hain.",
-              );
-              await navigateToMenu(from);
-              continue;
-            }
-
-            // Calculate price based on selected quantity
-            const totalPrice = calculatePrice(selectedItem, gramsRequested);
-
-            // Save selected packet size
-            await conversation.setState(from, "packet_quantity", {
-              selectedItem,
-              selectedCategory: stateData?.metadata?.selectedCategory,
-              gramsRequested,
-              unitPrice: totalPrice,
-            });
-
-            // Ask customer for packet count
-            await sendMessage(
-              from,
-              `✅ *${gramsRequested} gm* select ho gaya.
-
-📦 Ab kitne packets chahiye?
-
-👇 Sirf number type karke bata dijiye.
-
-*Example:*
-1
-2
-5
-10`,
-            );
-
             continue;
           }
 
@@ -1365,17 +1208,13 @@ Chaliye, dobara shuru karte hain.`,
               await navigateToMenu(from);
               continue;
             }
-            const {
-              selectedItem,
-              gramsRequested,
-              unitPrice,
-              selectedCategory,
-            } = stateData.metadata;
+            const { selectedItem, selectedCategory, packetSize, unitPrice } =
+              stateData.metadata;
 
             const cartResult = await cartService.addItem(from, {
               name: selectedItem.name,
-              weight: gramsRequested,
-              unit: "grams",
+              weight: packetSize,
+              unit: selectedItem.unit,
               quantity: packets,
               price: unitPrice.toFixed(2),
             });
@@ -1392,7 +1231,8 @@ Chaliye, dobara shuru karte hain.`,
               from,
               `✅ *${selectedItem.name}* aapke cart me add kar diya gaya hai.
 
-📦 Quantity: ${packets} × ${gramsRequested} gm
+📦 Packing: ${packetSize}${selectedItem.unit === "grams" ? "g" : ` ${selectedItem.unit}`}
+🔢 Packets: ${packets}
 💰 Total Amount: ₹${(unitPrice * packets).toFixed(2)}
 
 ${await cartService.formatCartSummary(from)}
