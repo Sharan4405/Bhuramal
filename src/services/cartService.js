@@ -159,35 +159,41 @@ class CartService {
   /**
    * Update quantity/weight of specific item in cart
    */
-  async updateItemQuantity(userId, itemIndex, packetSize, packets) {
+  async updateItemQuantity(userId, itemIndex, packets) {
     try {
       const cart = await Cart.findOne({ userId });
+
       if (!cart || !cart.items[itemIndex]) {
         return { success: false, error: "Item not found" };
       }
 
       const item = cart.items[itemIndex];
 
-      // For gram-based items, update weight and recalculate price
-      if (item.unit === "grams") {
-        item.weight = packetSize;
-        item.quantity = packets;
-        item.totalPrice = Math.round(item.unitPrice * packets * 100) / 100;
-      } else {
-        item.quantity = packetSize;
-        item.totalPrice = Math.round(item.unitPrice * packetSize * 100) / 100;
-      }
+      // Only update packet quantity.
+      // Existing weight/packing remains unchanged.
+      item.quantity = packets;
 
-      // Mark the items array as modified (required for Mongoose subdocuments)
+      // Recalculate total using existing unit price
+      item.totalPrice = Math.round(item.unitPrice * packets * 100) / 100;
+
       cart.markModified("items");
+
       await cart.save();
 
-      // Reset reminder flag since cart was updated
+      // Reset reminder because cart was updated
       await resetCartReminder(userId);
 
-      return { success: true, cart };
+      return {
+        success: true,
+        cart,
+      };
     } catch (error) {
-      return { success: false, error: error.message };
+      console.error("❌ Error updating item quantity:", error);
+
+      return {
+        success: false,
+        error: error.message,
+      };
     }
   }
 
