@@ -586,6 +586,11 @@ async function handleIncoming(req, res) {
             continue;
           }
 
+          // Manual mode: do not auto-respond
+          if (state === "manual") {
+            continue;
+          }
+
           // Global: switch to manual support from anywhere
           if (text === "support") {
             await navigateToSupport(from);
@@ -671,8 +676,29 @@ Main menu par wapas aane ke liye kabhi bhi "menu" likh sakte hain.`,
             continue;
           }
 
-          // Manual mode: do not auto-respond (menu already handled above)
-          if (state === "manual") {
+          // Handle Order Now / Start Shopping globally
+          if (text === "orders") {
+            await showOrderCategories(from);
+            await conversation.setState(from, "ordering");
+            continue;
+          }
+
+          // Handle View Cart globally
+          if (text === "view_cart") {
+            if (await cartService.isEmpty(from)) {
+              await sendButtonMessage(
+                from,
+                `Aapka cart abhi khaali hai.
+
+Apni pasand ke products add kijiye aur phir checkout kijiye.`,
+                [{ id: "orders", title: "🛒 Start Shopping" }],
+              );
+
+              await conversation.setState(from, "menu");
+            } else {
+              await showCartWithOptions(from);
+            }
+
             continue;
           }
 
@@ -680,38 +706,6 @@ Main menu par wapas aane ke liye kabhi bhi "menu" likh sakte hain.`,
           if (state === "menu" && /^hi$|^hello$/i.test(text)) {
             const sendStart = Date.now();
             await sendMessage(from, "Hello! 👋 Please use the options above.");
-            continue;
-          }
-
-          // Handle main menu buttons globally (from any state)
-          if (text === "orders") {
-            // If already in ordering flow, ignore (stale button click)
-            if (
-              state === "ordering" ||
-              state === "selecting_item" ||
-              state === "quantity_input"
-            ) {
-              continue;
-            }
-            await showOrderCategories(from);
-            await conversation.setState(from, "ordering");
-            continue;
-          }
-
-          // Handle cart reminder buttons globally (can be clicked from any state)
-          if (text === "view_cart" && state !== "menu") {
-            // If cart reminder button clicked from non-menu state
-            await conversation.setState(from, "menu");
-
-            if (await cartService.isEmpty(from)) {
-              await sendButtonMessage(
-                from,
-                "🛒 Your cart is empty.\n\nStart shopping to add items!",
-                [{ id: "orders", title: "🛒 Start Shopping" }],
-              );
-            } else {
-              await showCartWithOptions(from);
-            }
             continue;
           }
 
@@ -760,26 +754,12 @@ Rajasthan
           }
 
           // Main menu handler
+          // Main menu handler
           if (state === "menu") {
-            if (text === "view_cart") {
-              // Show cart contents
-              if (await cartService.isEmpty(from)) {
-                await sendButtonMessage(
-                  from,
-                  `Aapka cart abhi khaali hai.
-
-Apni pasand ke products add kijiye aur phir checkout kijiye.`,
-                  [{ id: "orders", title: "🛒 Start Shopping" }],
-                );
-              } else {
-                await showCartWithOptions(from);
-              }
-            } else {
-              await sendMessage(
-                from,
-                "Kripya upar diye gaye options me se kisi ek ko choose kijiye.",
-              );
-            }
+            await sendMessage(
+              from,
+              "Kripya upar diye gaye options me se kisi ek ko choose kijiye.",
+            );
             continue;
           }
 
