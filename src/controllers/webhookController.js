@@ -586,11 +586,6 @@ async function handleIncoming(req, res) {
             continue;
           }
 
-          // Manual mode: do not auto-respond
-          if (state === "manual") {
-            continue;
-          }
-
           // Global: switch to manual support from anywhere
           if (text === "support") {
             await navigateToSupport(from);
@@ -676,29 +671,8 @@ Main menu par wapas aane ke liye kabhi bhi "menu" likh sakte hain.`,
             continue;
           }
 
-          // Handle Order Now / Start Shopping globally
-          if (text === "orders") {
-            await showOrderCategories(from);
-            await conversation.setState(from, "ordering");
-            continue;
-          }
-
-          // Handle View Cart globally
-          if (text === "view_cart") {
-            if (await cartService.isEmpty(from)) {
-              await sendButtonMessage(
-                from,
-                `Aapka cart abhi khaali hai.
-
-Apni pasand ke products add kijiye aur phir checkout kijiye.`,
-                [{ id: "orders", title: "🛒 Start Shopping" }],
-              );
-
-              await conversation.setState(from, "menu");
-            } else {
-              await showCartWithOptions(from);
-            }
-
+          // Manual mode: do not auto-respond (menu already handled above)
+          if (state === "manual") {
             continue;
           }
 
@@ -706,6 +680,38 @@ Apni pasand ke products add kijiye aur phir checkout kijiye.`,
           if (state === "menu" && /^hi$|^hello$/i.test(text)) {
             const sendStart = Date.now();
             await sendMessage(from, "Hello! 👋 Please use the options above.");
+            continue;
+          }
+
+          // Handle main menu buttons globally (from any state)
+          if (text === "orders") {
+            // If already in ordering flow, ignore (stale button click)
+            if (
+              state === "ordering" ||
+              state === "selecting_item" ||
+              state === "quantity_input"
+            ) {
+              continue;
+            }
+            await showOrderCategories(from);
+            await conversation.setState(from, "ordering");
+            continue;
+          }
+
+          // Handle cart reminder buttons globally (can be clicked from any state)
+          if (text === "view_cart" && state !== "menu") {
+            // If cart reminder button clicked from non-menu state
+            await conversation.setState(from, "menu");
+
+            if (await cartService.isEmpty(from)) {
+              await sendButtonMessage(
+                from,
+                "🛒 Your cart is empty.\n\nStart shopping to add items!",
+                [{ id: "orders", title: "🛒 Start Shopping" }],
+              );
+            } else {
+              await showCartWithOptions(from);
+            }
             continue;
           }
 
@@ -754,12 +760,26 @@ Rajasthan
           }
 
           // Main menu handler
-          // Main menu handler
           if (state === "menu") {
-            await sendMessage(
-              from,
-              "Kripya upar diye gaye options me se kisi ek ko choose kijiye.",
-            );
+            if (text === "view_cart") {
+              // Show cart contents
+              if (await cartService.isEmpty(from)) {
+                await sendButtonMessage(
+                  from,
+                  `Aapka cart abhi khaali hai.
+
+Apni pasand ke products add kijiye aur phir checkout kijiye.`,
+                  [{ id: "orders", title: "🛒 Start Shopping" }],
+                );
+              } else {
+                await showCartWithOptions(from);
+              }
+            } else {
+              await sendMessage(
+                from,
+                "Kripya upar diye gaye options me se kisi ek ko choose kijiye.",
+              );
+            }
             continue;
           }
 
@@ -809,9 +829,7 @@ Rajasthan
 
               await sendListMessage(
                 from,
-                `✏️ Kaunsa item change karna hai?
-
-Neeche se item select kijiye. Aap us item ke packets ki quantity update kar sakte hain.`,
+                `✏️ Kaunsa item change karna hai?\n\nNeeche se item select kar dijiye, aap quantity ya packet size update kar sakte hain `,
                 sections,
                 "Select Item",
               );
@@ -841,8 +859,8 @@ Neeche se item select kijiye. Aap us item ke packets ki quantity update kar sakt
 
               if (
                 existingUser?.fullAddress &&
-                existingUser?.latitude != null &&
-                existingUser?.longitude != null
+                existingUser?.latitude &&
+                existingUser?.longitude
               ) {
                 await conversation.setState(from, "address_confirmation");
 
@@ -898,7 +916,7 @@ Rajasthan
               await sendButtonMessage(
                 from,
                 "✅ Aapka cart khali kar diya gaya hai.\n\nAgar dobara kuch order karna ho toh neeche se start kar sakte hain",
-                [{ id: "main_menu", title: "🏠 Main Menu" }],
+                [{ id: "orders", title: "🏠 Main Menu" }],
               );
               await conversation.setState(from, "menu");
               continue;
@@ -990,11 +1008,12 @@ Packet ki quantity number mein bhej dijiye.
 
             const stateData = await conversation.getState(from, true);
 
-            const { itemIndex } = stateData.metadata;
+            const { itemIndex, packetSize } = stateData.metadata;
 
             const result = await cartService.updateItemQuantity(
               from,
               itemIndex,
+              packetSize,
               packets,
             );
 
@@ -1244,8 +1263,8 @@ Ab batayein, aage kya karna chahenge?`,
 
               if (
                 existingUser?.fullAddress &&
-                existingUser?.latitude != null &&
-                existingUser?.longitude != null
+                existingUser?.latitude &&
+                existingUser?.longitude
               ) {
                 await conversation.setState(from, "address_confirmation");
 
@@ -1527,8 +1546,8 @@ Kripya thodi der baad dobara try kijiye. Agar problem bani rahe, to hamari suppo
             continue;
           }
 
-          // Address input
           if (state === "address_input") {
+            // Address input
             let fullAddress = "";
 
             const customerName = userName || user.customerName || "Customer";
@@ -1616,8 +1635,6 @@ Rajasthan
                   $set: {
                     customerName,
                     fullAddress,
-                    latitude,
-                    longitude,
                   },
                 },
               );
