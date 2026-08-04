@@ -861,8 +861,8 @@ Neeche se item select kijiye. Aap us item ke packets ki quantity update kar sakt
 
               if (
                 existingUser?.fullAddress &&
-                existingUser?.latitude &&
-                existingUser?.longitude
+                existingUser?.latitude != null &&
+                existingUser?.longitude != null
               ) {
                 await conversation.setState(from, "address_confirmation");
 
@@ -918,7 +918,7 @@ Rajasthan
               await sendButtonMessage(
                 from,
                 "✅ Aapka cart khali kar diya gaya hai.\n\nAgar dobara kuch order karna ho toh neeche se start kar sakte hain",
-                [{ id: "orders", title: "🏠 Main Menu" }],
+                [{ id: "main_menu", title: "🏠 Main Menu" }],
               );
               await conversation.setState(from, "menu");
               continue;
@@ -1265,8 +1265,8 @@ Ab batayein, aage kya karna chahenge?`,
 
               if (
                 existingUser?.fullAddress &&
-                existingUser?.latitude &&
-                existingUser?.longitude
+                existingUser?.latitude != null &&
+                existingUser?.longitude != null
               ) {
                 await conversation.setState(from, "address_confirmation");
 
@@ -1548,8 +1548,8 @@ Kripya thodi der baad dobara try kijiye. Agar problem bani rahe, to hamari suppo
             continue;
           }
 
+          // Address input
           if (state === "address_input") {
-            // Address input
             let fullAddress = "";
 
             const customerName = userName || user.customerName || "Customer";
@@ -1637,6 +1637,8 @@ Rajasthan
                   $set: {
                     customerName,
                     fullAddress,
+                    latitude,
+                    longitude,
                   },
                 },
               );
