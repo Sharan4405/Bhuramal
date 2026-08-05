@@ -136,7 +136,7 @@ Agar kisi bhi cheez me help chahiye ho, to *Support & Queries* par tap kar dijiy
 
 Welcome to *Bhuramal Bhagirath Prasad* 😊
 
-Aaj aap kya order karna chahenge?
+Aaj aap kya order karna chahenge? jldi batao
 
 👇 Neeche diye gaye options me se apni pasand ka option choose kar lijiye.
 
