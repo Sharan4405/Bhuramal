@@ -127,7 +127,7 @@ async function showMainMenu(from, userName = null) {
 
 Welcome to *Bhuramal Bhagirath Prasad* 😊
 
-Aaj aap kya order karna chahenge?
+Aaj aap kya order karna chahenge? jldi batao
 
 👇 Neeche diye gaye options me se apni pasand ka option choose kar lijiye.
 
