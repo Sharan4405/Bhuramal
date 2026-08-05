@@ -127,7 +127,7 @@ async function showMainMenu(from, userName = null) {
 
 Welcome to *Bhuramal Bhagirath Prasad* 😊
 
-Aaj aap kya order karna chahenge? jldi batao
+Aaj aap kya order karna chahenge? 
 
 👇 Neeche diye gaye options me se apni pasand ka option choose kar lijiye.
 
@@ -136,7 +136,7 @@ Agar kisi bhi cheez me help chahiye ho, to *Support & Queries* par tap kar dijiy
 
 Welcome to *Bhuramal Bhagirath Prasad* 😊
 
-Aaj aap kya order karna chahenge? jldi batao
+Aaj aap kya order karna chahenge? 
 
 👇 Neeche diye gaye options me se apni pasand ka option choose kar lijiye.
 
@@ -829,7 +829,10 @@ Apni pasand ke products add kijiye aur phir checkout kijiye.`,
 
               await sendListMessage(
                 from,
-                `✏️ Kaunsa item change karna hai?\n\nNeeche se item select kar dijiye, aap quantity ya packet size update kar sakte hain `,
+                `✏️ *Kaunsa item change karna hai?*
+
+Neeche se item select kijiye.
+Uske baad aap us item ke *packet ki quantity* change kar sakte hain. 😊`,
                 sections,
                 "Select Item",
               );
@@ -1008,12 +1011,11 @@ Packet ki quantity number mein bhej dijiye.
 
             const stateData = await conversation.getState(from, true);
 
-            const { itemIndex, packetSize } = stateData.metadata;
+            const { itemIndex } = stateData.metadata;
 
             const result = await cartService.updateItemQuantity(
               from,
               itemIndex,
-              packetSize,
               packets,
             );
 
