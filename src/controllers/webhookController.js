@@ -919,7 +919,7 @@ Rajasthan
               await sendButtonMessage(
                 from,
                 "✅ Aapka cart khali kar diya gaya hai.\n\nAgar dobara kuch order karna ho toh neeche se start kar sakte hain",
-                [{ id: "orders", title: "🏠 Main Menu" }],
+                [{ id: "orders", title: "Start Shoping" }],
               );
               await conversation.setState(from, "menu");
               continue;
