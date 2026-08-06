@@ -451,16 +451,19 @@ export default function OrdersPage() {
           </button>
 
           {/* Filters */}
+          {/* Filters */}
           <Card
             className={`mb-6 p-4 ${showFilters ? "block" : "hidden md:block"}`}
           >
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              {/* Status */}
               <select
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[rgb(var(--orange))] focus:ring-2 focus:ring-[rgb(var(--orange))]/20"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white focus:outline-none focus:border-[rgb(var(--orange))] focus:ring-2 focus:ring-[rgb(var(--orange))]/20"
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
               >
                 <option value="">All Status</option>
+
                 {STATUS_OPTIONS.map((status) => (
                   <option key={status.value} value={status.value}>
                     {status.label}
@@ -468,8 +471,9 @@ export default function OrdersPage() {
                 ))}
               </select>
 
+              {/* Payment Status */}
               <select
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[rgb(var(--orange))] focus:ring-2 focus:ring-[rgb(var(--orange))]/20"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white focus:outline-none focus:border-[rgb(var(--orange))] focus:ring-2 focus:ring-[rgb(var(--orange))]/20"
                 value={paymentFilter}
                 onChange={(e) => setPaymentFilter(e.target.value)}
               >
@@ -480,13 +484,13 @@ export default function OrdersPage() {
                 <option value="failed">Failed</option>
               </select>
 
+              {/* Date Preset */}
               <select
-                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[rgb(var(--orange))] focus:ring-2 focus:ring-[rgb(var(--orange))]/20"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-white focus:outline-none focus:border-[rgb(var(--orange))] focus:ring-2 focus:ring-[rgb(var(--orange))]/20"
                 value={dateFilter}
                 onChange={(e) => {
                   setDateFilter(e.target.value);
 
-                  // Preset select karne par custom dates clear
                   if (e.target.value) {
                     setFromDate("");
                     setToDate("");
@@ -500,40 +504,39 @@ export default function OrdersPage() {
                 <option value="month">This Month</option>
               </select>
 
-              {/* Custom Date Range */}
-              <div className="flex flex-col sm:flex-row gap-2">
-                <input
-                  type="date"
-                  value={fromDate}
-                  onChange={(e) => {
-                    setFromDate(e.target.value);
-                    setDateFilter("");
-                    setCurrentPage(1);
-                  }}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[rgb(var(--orange))] focus:ring-2 focus:ring-[rgb(var(--orange))]/20"
-                />
+              {/* From Date */}
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => {
+                  setFromDate(e.target.value);
+                  setDateFilter("");
+                  setCurrentPage(1);
+                }}
+                className="w-full min-w-0 px-4 py-2.5 border border-gray-300 rounded-lg bg-white focus:outline-none focus:border-[rgb(var(--orange))] focus:ring-2 focus:ring-[rgb(var(--orange))]/20"
+              />
 
-                <input
-                  type="date"
-                  value={toDate}
-                  onChange={(e) => {
-                    setToDate(e.target.value);
-                    setDateFilter("");
-                    setCurrentPage(1);
-                  }}
-                  className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[rgb(var(--orange))] focus:ring-2 focus:ring-[rgb(var(--orange))]/20"
-                />
-              </div>
+              {/* To Date */}
+              <input
+                type="date"
+                value={toDate}
+                onChange={(e) => {
+                  setToDate(e.target.value);
+                  setDateFilter("");
+                  setCurrentPage(1);
+                }}
+                className="w-full min-w-0 px-4 py-2.5 border border-gray-300 rounded-lg bg-white focus:outline-none focus:border-[rgb(var(--orange))] focus:ring-2 focus:ring-[rgb(var(--orange))]/20"
+              />
 
+              {/* Refresh */}
               <button
                 onClick={fetchOrders}
-                className="md:col-span-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium transition-colors"
+                className="sm:col-span-2 lg:col-span-1 w-full px-4 py-2.5 bg-[rgb(var(--orange))] text-white rounded-lg hover:bg-orange-600 font-medium transition-colors shadow-sm"
               >
                 Refresh
               </button>
             </div>
           </Card>
-
           {/* Orders List */}
           {loading ? (
             <div className="flex justify-center items-center py-20">
