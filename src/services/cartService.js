@@ -6,6 +6,9 @@
 import Cart from "../models/Cart.js";
 import { resetCartReminder } from "./cartAbandonmentService.js";
 
+const DELIVERY_CHARGE = 103;
+const FREE_DELIVERY_THRESHOLD = 1500;
+
 class CartService {
   /**
    * Add item to user's cart
@@ -100,16 +103,24 @@ class CartService {
     const cart = await this.getCart(userId);
 
     const totalItems = cart.items.reduce((sum, item) => sum + item.quantity, 0);
-    const totalAmount = cart.items.reduce(
-      (sum, item) => sum + item.totalPrice,
-      0,
-    );
+
+    // Products ka total — delivery charge ke bina
+    const subtotal = cart.items.reduce((sum, item) => sum + item.totalPrice, 0);
+
+    // ₹1500 ya usse zyada par FREE delivery
+    const deliveryCharge =
+      subtotal >= FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_CHARGE;
+
+    // Final amount = products + delivery
+    const totalAmount = subtotal + deliveryCharge;
 
     return {
       items: cart.items,
       totalItems,
-      totalAmount,
       itemCount: cart.items.length,
+      subtotal,
+      deliveryCharge,
+      totalAmount,
     };
   }
 
@@ -221,7 +232,15 @@ class CartService {
 
     message += `🛍️ Products: ${summary.itemCount}\n`;
     message += `📦 Total Packets: ${summary.totalItems}\n`;
-    message += `💰 *Total Amount: ₹${summary.totalAmount.toFixed(2)}*`;
+    message += `💰 Item Amount: ₹${summary.subtotal.toFixed(2)}\n`;
+
+    if (summary.deliveryCharge === 0) {
+      message += `🚚 Delivery Charges: *FREE* 🎉\n`;
+    } else {
+      message += `🚚 Delivery Charges: ₹${summary.deliveryCharge.toFixed(2)}\n`;
+    }
+
+    message += `💵 *Total Bill: ₹${summary.totalAmount.toFixed(2)}*`;
 
     return message;
   }

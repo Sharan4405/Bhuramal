@@ -31,8 +31,9 @@ const orderSchema = new mongoose.Schema(
     ],
     // Order Summary
     totalItems: { type: Number, required: true },
+    subtotal: { type: Number, required: true },
+    deliveryCharge: { type: Number, required: true, default: 0 },
     totalAmount: { type: Number, required: true },
-
     // Order Status
     status: {
       type: String,
@@ -125,7 +126,12 @@ orderSchema.methods.addItem = function (item) {
 
 orderSchema.methods.recalculateTotals = function () {
   this.totalItems = this.items.reduce((sum, item) => sum + item.quantity, 0);
-  this.totalAmount = this.items.reduce((sum, item) => sum + item.totalPrice, 0);
+
+  this.subtotal = this.items.reduce((sum, item) => sum + item.totalPrice, 0);
+
+  this.deliveryCharge = this.subtotal >= 1500 ? 0 : 103;
+
+  this.totalAmount = this.subtotal + this.deliveryCharge;
 };
 
 // Static methods

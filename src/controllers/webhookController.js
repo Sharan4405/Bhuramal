@@ -15,7 +15,7 @@ import cartService from "../services/cartService.js";
 import { notifyNewMessage } from "../services/socketService.js";
 import { calculatePrice, getPriceBreakdown } from "../utils/priceCalculator.js";
 import User from "../models/User.model.js";
-import { error } from "console";
+
 // Main menu configuration
 const MAIN_MENU = {
   buttons: [
@@ -321,7 +321,13 @@ ${itemsText}
 
 ━━━━━━━━━━━━━━━━
 📦 Total Products: ${summary.totalItems}
-💰 *Total Bill: ₹${summary.totalAmount.toFixed(2)}*
+💰 Item Total: ₹${summary.subtotal.toFixed(2)}
+🚚 Delivery Charges: ${
+      summary.deliveryCharge === 0
+        ? "FREE 🎉"
+        : `₹${summary.deliveryCharge.toFixed(2)}`
+    }
+💵 *Total Bill: ₹${summary.totalAmount.toFixed(2)}*
 
 👇 Ab batayein, aage kya karna chahenge?`,
     sections,
@@ -872,8 +878,8 @@ Uske baad aap us item ke *packet ki quantity* change kar sakte hain. 😊`,
 
               if (
                 existingUser?.fullAddress &&
-                existingUser?.latitude &&
-                existingUser?.longitude
+                existingUser?.latitude != null &&
+                existingUser?.longitude != null
               ) {
                 await conversation.setState(from, "address_confirmation");
 
@@ -1275,8 +1281,8 @@ Ab batayein, aage kya karna chahenge?`,
 
               if (
                 existingUser?.fullAddress &&
-                existingUser?.latitude &&
-                existingUser?.longitude
+                existingUser?.latitude != null &&
+                existingUser?.longitude != null
               ) {
                 await conversation.setState(from, "address_confirmation");
 
@@ -1432,7 +1438,12 @@ Pehle kuch products add kar lijiye, phir hum checkout ki process aage badhayenge
                   longitude,
                   items: cartSummary.items,
                   totalItems: cartSummary.totalItems,
+
+                  // Billing details
+                  subtotal: cartSummary.subtotal,
+                  deliveryCharge: cartSummary.deliveryCharge,
                   totalAmount: cartSummary.totalAmount,
+
                   status: "pending",
                 };
 
@@ -1710,10 +1721,14 @@ Pehle kuch products add kar lijiye, phir hum checkout ki process aage badhayenge
                 longitude,
                 items: cartSummary.items,
                 totalItems: cartSummary.totalItems,
+
+                // Billing details
+                subtotal: cartSummary.subtotal,
+                deliveryCharge: cartSummary.deliveryCharge,
                 totalAmount: cartSummary.totalAmount,
+
                 status: "pending",
               };
-
               // Update user final data
               await User.findOneAndUpdate(
                 {
@@ -1764,6 +1779,12 @@ Pehle kuch products add kar lijiye, phir hum checkout ki process aage badhayenge
                 const orderSummary = `📦 *Aapke order ki details*
 
 ${itemsList}
+🛍️ *Item Total: ₹${cartSummary.subtotal.toFixed(2)}*
+🚚 *Delivery Charges: ${
+                  cartSummary.deliveryCharge === 0
+                    ? "FREE 🎉"
+                    : `₹${cartSummary.deliveryCharge.toFixed(2)}`
+                }*
 💰 *Total Amount: ₹${cartSummary.totalAmount.toFixed(2)}*
 
 📍 *Delivery Address:*
@@ -1838,7 +1859,10 @@ Kripya thodi der baad dobara try kijiye. Agar problem bani rahe, to hamari suppo
 
             try {
               // Fetch order from database using custom orderId field
-              const order = await Order.findOne({ orderId: orderId });
+              const order = await Order.findOne({
+                orderId: orderId,
+                phoneNumber: from,
+              });
 
               if (!order) {
                 await sendButtonMessage(
