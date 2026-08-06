@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { AdminNav } from "@/components/dashboard/AdminNav";
@@ -31,6 +31,8 @@ interface Order {
   status: string;
   paymentStatus: string;
   orderDate: string;
+  createdAt?: string;
+
   items: OrderItem[];
   razorpayPaymentId?: string;
 }
@@ -69,6 +71,14 @@ export default function OrdersPage() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
+  const [dateFilter, setDateFilter] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const ORDERS_PER_PAGE = 15;
+
   const fetchOrders = useCallback(async () => {
     try {
       setLoading(true);
@@ -101,6 +111,10 @@ export default function OrdersPage() {
     fetchStats();
   }, [fetchOrders]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, paymentFilter, dateFilter, fromDate, toDate]);
+
   const fetchStats = async () => {
     try {
       const token = localStorage.getItem("token");
@@ -118,6 +132,127 @@ export default function OrdersPage() {
       console.error("Error fetching stats:", error);
     }
   };
+
+  const filteredAndSortedOrders = useMemo(() => {
+    let result = [...orders];
+
+    // Get reliable order date
+    const getOrderTimestamp = (order: Order) => {
+      if (order.createdAt) {
+        const timestamp = new Date(order.createdAt).getTime();
+
+        if (!isNaN(timestamp)) {
+          return timestamp;
+        }
+      }
+
+      const timestamp = new Date(order.orderDate).getTime();
+
+      return isNaN(timestamp) ? 0 : timestamp;
+    };
+
+    // Date filter
+    const now = new Date();
+
+    if (dateFilter) {
+      result = result.filter((order) => {
+        const orderTime = getOrderTimestamp(order);
+
+        if (!orderTime) return false;
+
+        const orderDate = new Date(orderTime);
+
+        // Today
+        if (dateFilter === "today") {
+          return (
+            orderDate.getFullYear() === now.getFullYear() &&
+            orderDate.getMonth() === now.getMonth() &&
+            orderDate.getDate() === now.getDate()
+          );
+        }
+
+        // Yesterday
+        if (dateFilter === "yesterday") {
+          const yesterday = new Date(now);
+          yesterday.setDate(now.getDate() - 1);
+
+          return (
+            orderDate.getFullYear() === yesterday.getFullYear() &&
+            orderDate.getMonth() === yesterday.getMonth() &&
+            orderDate.getDate() === yesterday.getDate()
+          );
+        }
+
+        // Last 7 Days
+        if (dateFilter === "7days") {
+          const sevenDaysAgo = new Date(now);
+          sevenDaysAgo.setDate(now.getDate() - 6);
+          sevenDaysAgo.setHours(0, 0, 0, 0);
+
+          return orderDate >= sevenDaysAgo;
+        }
+
+        // This Month
+        if (dateFilter === "month") {
+          return (
+            orderDate.getFullYear() === now.getFullYear() &&
+            orderDate.getMonth() === now.getMonth()
+          );
+        }
+
+        return true;
+      });
+    }
+
+    // Custom date range
+    if (fromDate || toDate) {
+      result = result.filter((order) => {
+        const orderTime = getOrderTimestamp(order);
+
+        if (!orderTime) return false;
+
+        const orderDate = new Date(orderTime);
+        orderDate.setHours(0, 0, 0, 0);
+
+        if (fromDate) {
+          const from = new Date(fromDate);
+          from.setHours(0, 0, 0, 0);
+
+          if (orderDate < from) {
+            return false;
+          }
+        }
+
+        if (toDate) {
+          const to = new Date(toDate);
+          to.setHours(23, 59, 59, 999);
+
+          if (orderDate > to) {
+            return false;
+          }
+        }
+
+        return true;
+      });
+    }
+
+    // Latest order first
+    result.sort((a, b) => {
+      return getOrderTimestamp(b) - getOrderTimestamp(a);
+    });
+
+    return result;
+  }, [orders, dateFilter, fromDate, toDate]);
+
+  // Pagination
+  const totalPages = Math.ceil(
+    filteredAndSortedOrders.length / ORDERS_PER_PAGE,
+  );
+
+  const paginatedOrders = filteredAndSortedOrders.slice(
+    (currentPage - 1) * ORDERS_PER_PAGE,
+    currentPage * ORDERS_PER_PAGE,
+  );
 
   const updateOrderStatus = async (orderId: string, newStatus: string) => {
     const token = localStorage.getItem("token");
@@ -345,6 +480,51 @@ export default function OrdersPage() {
                 <option value="failed">Failed</option>
               </select>
 
+              <select
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[rgb(var(--orange))] focus:ring-2 focus:ring-[rgb(var(--orange))]/20"
+                value={dateFilter}
+                onChange={(e) => {
+                  setDateFilter(e.target.value);
+
+                  // Preset select karne par custom dates clear
+                  if (e.target.value) {
+                    setFromDate("");
+                    setToDate("");
+                  }
+                }}
+              >
+                <option value="">All Dates</option>
+                <option value="today">Today</option>
+                <option value="yesterday">Yesterday</option>
+                <option value="7days">Last 7 Days</option>
+                <option value="month">This Month</option>
+              </select>
+
+              {/* Custom Date Range */}
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => {
+                    setFromDate(e.target.value);
+                    setDateFilter("");
+                    setCurrentPage(1);
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[rgb(var(--orange))] focus:ring-2 focus:ring-[rgb(var(--orange))]/20"
+                />
+
+                <input
+                  type="date"
+                  value={toDate}
+                  onChange={(e) => {
+                    setToDate(e.target.value);
+                    setDateFilter("");
+                    setCurrentPage(1);
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[rgb(var(--orange))] focus:ring-2 focus:ring-[rgb(var(--orange))]/20"
+                />
+              </div>
+
               <button
                 onClick={fetchOrders}
                 className="md:col-span-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 font-medium transition-colors"
@@ -359,7 +539,7 @@ export default function OrdersPage() {
             <div className="flex justify-center items-center py-20">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[rgb(var(--orange))]"></div>
             </div>
-          ) : orders.length === 0 ? (
+          ) : filteredAndSortedOrders.length === 0 ? (
             <Card className="p-12 text-center">
               <svg
                 className="mx-auto h-12 w-12 text-gray-400 mb-4"
@@ -411,7 +591,7 @@ export default function OrdersPage() {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {orders.map((order) => (
+                      {paginatedOrders.map((order) => (
                         <tr
                           key={order._id}
                           className="hover:bg-gray-50 transition-colors"
@@ -475,7 +655,7 @@ export default function OrdersPage() {
 
               {/* Mobile/Tablet Card View */}
               <div className="lg:hidden space-y-3">
-                {orders.map((order) => (
+                {paginatedOrders.map((order) => (
                   <Card
                     key={order._id}
                     className="p-4 cursor-pointer hover:shadow-md transition-shadow"
@@ -529,6 +709,36 @@ export default function OrdersPage() {
                   </Card>
                 ))}
               </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between mt-6">
+                  <button
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.max(prev - 1, 1))
+                    }
+                    disabled={currentPage === 1}
+                    className="px-4 py-2 border border-gray-300 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                  >
+                    ← Previous
+                  </button>
+
+                  <div className="text-sm text-gray-600">
+                    Page <span className="font-semibold">{currentPage}</span> of{" "}
+                    <span className="font-semibold">{totalPages}</span>
+                  </div>
+
+                  <button
+                    onClick={() =>
+                      setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                    }
+                    disabled={currentPage === totalPages}
+                    className="px-4 py-2 border border-gray-300 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
             </>
           )}
 
@@ -638,7 +848,7 @@ export default function OrdersPage() {
                             {selectedOrder.fullAddress}
                           </div>
                           {/* Google Maps Button */}
-                          
+
                           {selectedOrder.latitude &&
                             selectedOrder.longitude && (
                               <div className="mt-4">
