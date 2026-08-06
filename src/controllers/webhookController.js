@@ -52,7 +52,16 @@ const STORE_MAPS_LINK = `https://www.google.com/maps/search/?api=1&query=${encod
 
 // 🔧 Helper to navigate to menu (reusable)
 async function navigateToMenu(from, userName = null) {
+  // Bot conversation state ko menu par reset karo
   await conversation.setState(from, "menu");
+
+  // Agar conversation manual support mode mein OPEN thi,
+  // to menu par aate hi usse RESOLVED kar do.
+  await Conversation.updateOne(
+    { user: from },
+    { $set: { status: "RESOLVED" } },
+  );
+
   await showMainMenu(from, userName);
 }
 
