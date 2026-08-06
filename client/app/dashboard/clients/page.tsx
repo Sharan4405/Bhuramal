@@ -25,6 +25,10 @@ export default function ClientsPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const CLIENTS_PER_PAGE = 15;
+
   useEffect(() => {
     const token = auth.getToken();
 
@@ -46,14 +50,26 @@ export default function ClientsPage() {
     loadUsers();
   }, [router]);
 
-  const filteredUsers = users.filter((user) => {
-    const search = searchTerm.toLowerCase();
+  const filteredUsers = users
+    .filter((user) => {
+      const search = searchTerm.toLowerCase();
 
-    return (
-      user.customerName?.toLowerCase().includes(search) ||
-      user.phoneNumber.includes(search)
+      return (
+        user.customerName?.toLowerCase().includes(search) ||
+        user.phoneNumber.includes(search)
+      );
+    })
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
-  });
+
+  const totalPages = Math.ceil(filteredUsers.length / CLIENTS_PER_PAGE);
+
+  const startIndex = (currentPage - 1) * CLIENTS_PER_PAGE;
+  const endIndex = startIndex + CLIENTS_PER_PAGE;
+
+  const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
 
   return (
     <>
@@ -104,7 +120,10 @@ export default function ClientsPage() {
               type="text"
               placeholder="Search by client name or phone..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
               className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-[rgb(var(--orange))] focus:ring-4 focus:ring-[rgb(var(--orange))]/10 transition-all"
             />
           </div>
@@ -161,7 +180,7 @@ export default function ClientsPage() {
                       </td>
                     </tr>
                   ) : (
-                    filteredUsers.map((user) => (
+                    paginatedUsers.map((user) => (
                       <tr
                         key={user._id}
                         className="hover:bg-gray-50 transition-colors"
@@ -206,6 +225,64 @@ export default function ClientsPage() {
               </table>
             </div>
           </Card>
+          {!loading && filteredUsers.length > 0 && (
+            <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+              {/* Showing count */}
+              <p className="text-sm text-gray-600">
+                Showing <span className="font-semibold">{startIndex + 1}</span>{" "}
+                -{" "}
+                <span className="font-semibold">
+                  {Math.min(endIndex, filteredUsers.length)}
+                </span>{" "}
+                of <span className="font-semibold">{filteredUsers.length}</span>{" "}
+                clients
+              </p>
+
+              {/* Pagination */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.max(prev - 1, 1))
+                  }
+                  disabled={currentPage === 1}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium
+        disabled:opacity-50 disabled:cursor-not-allowed
+        hover:bg-gray-50 transition-colors"
+                >
+                  ← Previous
+                </button>
+
+                {Array.from(
+                  { length: totalPages },
+                  (_, index) => index + 1,
+                ).map((page) => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`w-10 h-10 rounded-lg text-sm font-medium transition-colors ${
+                      currentPage === page
+                        ? "bg-[rgb(var(--orange))] text-white"
+                        : "border border-gray-300 text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+
+                <button
+                  onClick={() =>
+                    setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                  }
+                  disabled={currentPage === totalPages}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium
+        disabled:opacity-50 disabled:cursor-not-allowed
+        hover:bg-gray-50 transition-colors"
+                >
+                  Next →
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </>
