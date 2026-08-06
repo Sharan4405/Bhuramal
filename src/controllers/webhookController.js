@@ -127,7 +127,12 @@ async function showMainMenu(from, userName = null) {
 
 Welcome to *Bhuramal Bhagirath Prasad* 😊
 
-Aaj aap kya order karna chahenge? 
+Aaj ki shopping par ek simple sa benefit hai:
+
+🚚 *₹1500 ya usse zyada ki shopping karein aur Delivery FREE paayein!* 🎉
+₹1500 se kam ki shopping par sirf *₹103 delivery charge* lagega.
+
+Aaj aap kya order karna chahenge?
 
 👇 Neeche diye gaye options me se apni pasand ka option choose kar lijiye.
 
@@ -136,7 +141,12 @@ Agar kisi bhi cheez me help chahiye ho, to *Support & Queries* par tap kar dijiy
 
 Welcome to *Bhuramal Bhagirath Prasad* 😊
 
-Aaj aap kya order karna chahenge? 
+Aaj ki shopping par ek simple sa benefit hai:
+
+🚚 *₹1500 ya usse zyada ki shopping karein aur Delivery FREE paayein!* 🎉
+₹1500 se kam ki shopping par sirf *₹103 delivery charge* lagega.
+
+Aaj aap kya order karna chahenge?
 
 👇 Neeche diye gaye options me se apni pasand ka option choose kar lijiye.
 
