@@ -171,26 +171,59 @@ Agar kisi bhi cheez me help chahiye ho, to *Support & Queries* par tap kar dijiy
 }
 
 // Helper to show order categories
-async function showOrderCategories(from) {
+async function showOrderCategories(from, page = 0) {
   const categories = await catalog.getCategories();
+
+  const totalPages = Math.ceil(categories.length / PAGE_SIZE);
+
+  const start = page * PAGE_SIZE;
+  const end = start + PAGE_SIZE;
+
+  // Current page ki categories
+  const currentCategories = categories.slice(start, end);
+
+  const categoryRows = currentCategories.map((cat, idx) => ({
+    // Original category index preserve kar rahe hain
+    id: `order_cat_${start + idx}`,
+    title: cat.substring(0, 24),
+    description: "View products",
+  }));
+
+  const navigationRows = [];
+
+  // Previous
+  if (page > 0) {
+    navigationRows.push({
+      id: `category_prev_${page - 1}`,
+      title: "⬅️ Previous",
+      description: "Pichhli categories dekhein",
+    });
+  }
+
+  // Next
+  if (page < totalPages - 1) {
+    navigationRows.push({
+      id: `category_next_${page + 1}`,
+      title: "➡️ Next",
+      description: "Aur categories dekhein",
+    });
+  }
+
+  // Main menu
+  navigationRows.push({
+    id: "main_menu",
+    title: "↩️ Back to Main Menu",
+    description: "Return to main menu",
+  });
+
   const sections = [
     {
-      title: "Available Categories",
-      rows: categories.map((cat, idx) => ({
-        id: `order_cat_${idx}`,
-        title: cat,
-        description: `View products`,
-      })),
+      title: `Available Categories (${page + 1}/${totalPages})`,
+      rows: categoryRows,
     },
     {
       title: "Navigation",
-      rows: [
-        {
-          id: "main_menu",
-          title: "↩️ Back to Main Menu",
-          description: "Return to main menu",
-        },
-      ],
+      rows: navigationRows,
     },
   ];
 
@@ -1058,12 +1091,32 @@ Packet ki quantity number mein bhej dijiye.
           }
           // Ordering handler - selecting category
           if (state === "ordering") {
-            // Parse category from list selection (format: order_cat_0)
+            // Category next page
+            if (text.startsWith("category_next_")) {
+              const page = Number(text.replace("category_next_", ""));
+
+              await showOrderCategories(from, page);
+
+              continue;
+            }
+
+            // Category previous page
+            if (text.startsWith("category_prev_")) {
+              const page = Number(text.replace("category_prev_", ""));
+
+              await showOrderCategories(from, page);
+
+              continue;
+            }
+
+            // Parse category from list selection
             let selectedCategory = null;
 
             if (text.startsWith("order_cat_")) {
               const catIndex = parseInt(text.split("_")[2]);
+
               const categories = await catalog.getCategories();
+
               selectedCategory = categories[catIndex];
             } else {
               // Fallback: direct text input
@@ -1075,6 +1128,7 @@ Packet ki quantity number mein bhej dijiye.
 
             if (categoryItems.length > 0) {
               await showCategoryItems(from, selectedCategory, categoryItems);
+
               await conversation.setState(from, "selecting_item", {
                 selectedCategory,
               });
@@ -1084,6 +1138,7 @@ Packet ki quantity number mein bhej dijiye.
                 "Invalid category. Please select from the list above.",
               );
             }
+
             continue;
           }
 
