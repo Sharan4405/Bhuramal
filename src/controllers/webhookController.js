@@ -818,23 +818,20 @@ Pehle apni pasand ke products add kar lijiye, phir hum checkout ki process aage 
                 from,
                 `Delivery ke liye hume aapka complete address chahiye.
 
-Kripya apna poora delivery address bhej dijiye.
+Kripya apna *naam aur poora delivery address* ek hi message mein bhej dijiye.
 
-Address me ye details zarur honi chahiye:
+Address is format mein bhejein:
 
+👤 Full Name
 🏠 House / Flat / Plot Number
 📍 Area / Locality
 🏙️ City
 🗺️ State
 📮 6-digit PIN Code
 
-Example:
+*Example:*
 
-House No. 21
-Vaishali Nagar
-Jaipur
-Rajasthan
-302021`,
+Rohit Sharma, Plot No. 2, Mansarovar, Jaipur, Rajasthan - 302020`,
               );
             }
             continue;
@@ -974,21 +971,20 @@ Kya aap isi address par delivery karwana chahenge?`,
                   from,
                   `📍 Order deliver karne ke liye apna address bhej dijiye 😊
 
-Address mein ye details zaroor likh dein:
+Kripya apna *naam aur poora delivery address* ek hi message mein bhej dijiye.
 
+Address is format mein bhejein:
+
+👤 Full Name
 🏠 House / Flat / Plot Number
 📍 Area / Locality
 🏙️ City
 🗺️ State
 📮 6-digit PIN Code
 
-Example:
+*Example:*
 
-House No. 21
-Vaishali Nagar
-Jaipur
-Rajasthan
-302021`,
+Rohit Sharma, Plot No. 2, Mansarovar, Jaipur, Rajasthan - 302020`,
                 );
               }
 
@@ -1407,21 +1403,20 @@ Kya aap isi address par delivery karwana chahenge?`,
                   from,
                   `📍 Order deliver karne ke liye apna address bhej dijiye 😊
 
-Address mein ye details zaroor likh dein:
+Kripya apna *naam aur poora delivery address* ek hi message mein bhej dijiye.
 
+Address is format mein bhejein:
+
+👤 Full Name
 🏠 House / Flat / Plot Number
 📍 Area / Locality
 🏙️ City
 🗺️ State
 📮 6-digit PIN Code
 
-Example:
+*Example:*
 
-House No. 21
-Vaishali Nagar
-Jaipur
-Rajasthan
-302021`,
+Rohit Sharma, Plot No. 2, Mansarovar, Jaipur, Rajasthan - 302020`,
                 );
               }
             } else if (text === "view_cart") {
@@ -1457,21 +1452,20 @@ Rajasthan
                 from,
                 `📍 Order deliver karne ke liye apna address bhej dijiye 😊
 
-Address mein ye details zaroor likh dein:
+Kripya apna *naam aur poora delivery address* ek hi message mein bhej dijiye.
 
+Address is format mein bhejein:
+
+👤 Full Name
 🏠 House / Flat / Plot Number
 📍 Area / Locality
 🏙️ City
 🗺️ State
 📮 6-digit PIN Code
 
-Example:
+*Example:*
 
-House No. 21
-Vaishali Nagar
-Jaipur
-Rajasthan
-302021`,
+Rohit Sharma, Plot No. 2, Mansarovar, Jaipur, Rajasthan - 302020`,
               );
 
               continue;
@@ -1681,16 +1675,12 @@ Kripya thodi der baad dobara try kijiye. Agar problem bani rahe, to hamari suppo
                 await sendMessage(
                   from,
                   `Delivery se pehle hume aapka complete address chahiye.
-                
-Kripya pehle apna poora address bhej dijiye.
-                
-Example:
-                
-House No. 21
-Vaishali Nagar
-Jaipur
-Rajasthan
-302021`,
+
+Kripya pehle apna *naam aur poora delivery address* ek hi message mein bhej dijiye.
+
+*Example:*
+
+Rohit Sharma, Plot No. 2, Mansarovar, Jaipur, Rajasthan - 302020`,
                 );
 
                 continue;
@@ -1728,17 +1718,13 @@ Kripya dobara apni current location share kar dijiye.`,
                   from,
                   `Delivery me koi dikkat na ho, isliye hume complete address chahiye.
 
-Kripya apna address dobara check karke bhej dijiye.
+Kripya apna *naam aur poora delivery address* dobara check karke bhej dijiye.
 
 ${validation.errors.map((error) => `• ${error}`).join("\n")}
 
-Example:
+*Example:*
 
-House No. 21
-Vaishali Nagar
-Jaipur
-Rajasthan
-302021`,
+Rohit Sharma, Plot No. 2, Mansarovar, Jaipur, Rajasthan - 302020`,
                 );
 
                 continue;
