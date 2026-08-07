@@ -15,7 +15,7 @@ import cartService from "../services/cartService.js";
 import { notifyNewMessage } from "../services/socketService.js";
 import { calculatePrice, getPriceBreakdown } from "../utils/priceCalculator.js";
 import User from "../models/User.model.js";
-
+const PAGE_SIZE = 8;
 // Main menu configuration
 const MAIN_MENU = {
   buttons: [
@@ -238,8 +238,6 @@ Sabhi categories neeche di gayi hain.
     "Choose Category",
   );
 }
-
-const PAGE_SIZE = 8;
 
 async function showCategoryItems(from, category, items, page = 0) {
   const totalPages = Math.ceil(items.length / PAGE_SIZE);
