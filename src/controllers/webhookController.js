@@ -15,7 +15,7 @@ import cartService from "../services/cartService.js";
 import { notifyNewMessage } from "../services/socketService.js";
 import { calculatePrice, getPriceBreakdown } from "../utils/priceCalculator.js";
 import User from "../models/User.model.js";
-const PAGE_SIZE = 8;
+
 // Main menu configuration
 const MAIN_MENU = {
   buttons: [
@@ -171,59 +171,26 @@ Agar kisi bhi cheez me help chahiye ho, to *Support & Queries* par tap kar dijiy
 }
 
 // Helper to show order categories
-async function showOrderCategories(from, page = 0) {
+async function showOrderCategories(from) {
   const categories = await catalog.getCategories();
-
-  const CATEGORY_PAGE_SIZE = 7;
-
-  const totalPages = Math.ceil(categories.length / CATEGORY_PAGE_SIZE);
-
-  const start = page * CATEGORY_PAGE_SIZE;
-  const end = start + CATEGORY_PAGE_SIZE;
-
-  const currentCategories = categories.slice(start, end);
-
-  const categoryRows = currentCategories.map((cat, idx) => ({
-    id: `order_cat_${start + idx}`,
-    title: cat.substring(0, 24),
-    description: "View products",
-  }));
-
-  const navigationRows = [];
-
-  // Previous
-  if (page > 0) {
-    navigationRows.push({
-      id: `category_prev_${page - 1}`,
-      title: "⬅️ Previous",
-      description: "Pichhli categories dekhein",
-    });
-  }
-
-  // Next
-  if (page < totalPages - 1) {
-    navigationRows.push({
-      id: `category_next_${page + 1}`,
-      title: "➡️ Next",
-      description: "Aur categories dekhein",
-    });
-  }
-
-  // Main Menu — har page par
-  navigationRows.push({
-    id: "main_menu",
-    title: "🏠 Main Menu",
-    description: "Main menu par wapas jayein",
-  });
-
   const sections = [
     {
-      title: `Available Categories (${page + 1}/${totalPages})`,
-      rows: categoryRows,
+      title: "Available Categories",
+      rows: categories.map((cat, idx) => ({
+        id: `order_cat_${idx}`,
+        title: cat,
+        description: `View products`,
+      })),
     },
     {
       title: "Navigation",
-      rows: navigationRows,
+      rows: [
+        {
+          id: "main_menu",
+          title: "↩️ Back to Main Menu",
+          description: "Return to main menu",
+        },
+      ],
     },
   ];
 
@@ -231,11 +198,15 @@ async function showOrderCategories(from, page = 0) {
     from,
     `🛍️ Aap kya lena chahenge? 😊
 
-👇 Neeche se apni pasand ki category choose kijiye.`,
+Sabhi categories neeche di gayi hain.
+
+👇 Neeche list me se apni pasand ki category choose kijiye.`,
     sections,
     "Choose Category",
   );
 }
+
+const PAGE_SIZE = 8;
 
 async function showCategoryItems(from, category, items, page = 0) {
   const totalPages = Math.ceil(items.length / PAGE_SIZE);
@@ -1087,32 +1058,12 @@ Packet ki quantity number mein bhej dijiye.
           }
           // Ordering handler - selecting category
           if (state === "ordering") {
-            // Category next page
-            if (text.startsWith("category_next_")) {
-              const page = Number(text.replace("category_next_", ""));
-
-              await showOrderCategories(from, page);
-
-              continue;
-            }
-
-            // Category previous page
-            if (text.startsWith("category_prev_")) {
-              const page = Number(text.replace("category_prev_", ""));
-
-              await showOrderCategories(from, page);
-
-              continue;
-            }
-
-            // Parse category from list selection
+            // Parse category from list selection (format: order_cat_0)
             let selectedCategory = null;
 
             if (text.startsWith("order_cat_")) {
               const catIndex = parseInt(text.split("_")[2]);
-
               const categories = await catalog.getCategories();
-
               selectedCategory = categories[catIndex];
             } else {
               // Fallback: direct text input
@@ -1124,7 +1075,6 @@ Packet ki quantity number mein bhej dijiye.
 
             if (categoryItems.length > 0) {
               await showCategoryItems(from, selectedCategory, categoryItems);
-
               await conversation.setState(from, "selecting_item", {
                 selectedCategory,
               });
@@ -1134,7 +1084,6 @@ Packet ki quantity number mein bhej dijiye.
                 "Invalid category. Please select from the list above.",
               );
             }
-
             continue;
           }
 
