@@ -327,9 +327,10 @@ async function showCartWithOptions(from) {
           ? `${item.weight}g`
           : `${item.weight} ${item.unit}`;
 
-      return `${idx + 1}. *${item.name}*\n   📦 Packing: ${weight}\n   💰 ₹${Number(item.price).toFixed(2)} × ${item.quantity} = ₹${item.totalPrice.toFixed(2)}`;
+      return `${idx + 1}. *${item.name}*\n   📦 Packing: ${weight}\n   💰 ₹${Number(item.price).toFixed(2)} × ${item.quantity} = ₹${Number(item.totalPrice).toFixed(2)}`;
     })
     .join("\n\n");
+
   const sections = [
     {
       title: "Aap kya karna chahenge?",
@@ -371,13 +372,13 @@ ${itemsText}
 
 ━━━━━━━━━━━━━━━━
 📦 Total Products: ${summary.totalItems}
-💰 Item Total: ₹${summary.subtotal.toFixed(2)}
+💰 Item Total: ₹${Number(summary.subtotal).toFixed(2)}
 🚚 Delivery Charges: ${
-      summary.deliveryCharge === 0
+      Number(summary.deliveryCharge) === 0
         ? "FREE 🎉"
-        : `₹${summary.deliveryCharge.toFixed(2)}`
+        : `₹${Number(summary.deliveryCharge).toFixed(2)}`
     }
-💵 *Total Bill: ₹${summary.totalAmount.toFixed(2)}*
+💵 *Total Bill: ₹${Number(summary.totalAmount).toFixed(2)}*
 
 👇 Ab batayein, aage kya karna chahenge?`,
     sections,

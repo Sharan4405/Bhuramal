@@ -221,26 +221,29 @@ class CartService {
     let message = "🛒 *Your Cart*\n\n";
 
     summary.items.forEach((item, index) => {
-      message += `${index + 1}. ${item.name}\n`;
-      // For gram-based items, show weight directly (no quantity multiplication)
-      if (item.unit === "grams") {
-        message += `${item.weight}g × ${item.quantity} Packet(s) - ₹${item.totalPrice.toFixed(2)}\n\n`;
-      } else {
-        message += `   ${item.weight} ${item.unit} × ${item.quantity} = ₹${item.totalPrice.toFixed(2)}\n\n`;
-      }
+      message += `${index + 1}. *${item.name}*\n`;
+
+      const weight =
+        item.unit === "grams"
+          ? `${item.weight}g`
+          : `${item.weight} ${item.unit}`;
+
+      message += `   📦 Packing: ${weight}\n`;
+      message += `   🔢 Packets: ${item.quantity}\n`;
+      message += `   💰 Amount: ₹${Number(item.totalPrice).toFixed(2)}\n\n`;
     });
 
     message += `🛍️ Products: ${summary.itemCount}\n`;
     message += `📦 Total Packets: ${summary.totalItems}\n`;
-    message += `💰 Item Amount: ₹${summary.subtotal.toFixed(2)}\n`;
+    message += `💰 Item Amount: ₹${Number(summary.subtotal).toFixed(2)}\n`;
 
     if (summary.deliveryCharge === 0) {
       message += `🚚 Delivery Charges: *FREE* 🎉\n`;
     } else {
-      message += `🚚 Delivery Charges: ₹${summary.deliveryCharge.toFixed(2)}\n`;
+      message += `🚚 Delivery Charges: ₹${Number(summary.deliveryCharge).toFixed(2)}\n`;
     }
 
-    message += `💵 *Total Bill: ₹${summary.totalAmount.toFixed(2)}*`;
+    message += `💵 *Total Bill: ₹${Number(summary.totalAmount).toFixed(2)}*`;
 
     return message;
   }
