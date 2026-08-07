@@ -171,53 +171,85 @@ Agar kisi bhi cheez me help chahiye ho, to *Support & Queries* par tap kar dijiy
 }
 
 // Helper to show order categories
-async function showOrderCategories(from) {
+async function showOrderCategories(from, page = 0) {
   const categories = await catalog.getCategories();
+
+  const totalPages = Math.ceil(categories.length / CATEGORY_PAGE_SIZE);
+
+  const start = page * CATEGORY_PAGE_SIZE;
+  const end = start + CATEGORY_PAGE_SIZE;
+
+  const currentCategories = categories.slice(start, end);
+
+  const categoryRows = currentCategories.map((cat, idx) => ({
+    id: `order_cat_${start + idx}`,
+    title: cat.substring(0, 24),
+    description: "View products",
+  }));
+
+  const navigationRows = [];
+
+  // Previous
+  if (page > 0) {
+    navigationRows.push({
+      id: `category_prev_${page - 1}`,
+      title: "⬅️ Previous",
+      description: "Pichhli categories",
+    });
+  }
+
+  // Next
+  if (page < totalPages - 1) {
+    navigationRows.push({
+      id: `category_next_${page + 1}`,
+      title: "➡️ Next",
+      description: "Aur categories dekhein",
+    });
+  }
+
+  // Main Menu
+  navigationRows.push({
+    id: "main_menu",
+    title: "🏠 Main Menu",
+    description: "Main menu par jayein",
+  });
+
   const sections = [
     {
-      title: "Available Categories",
-      rows: categories.map((cat, idx) => ({
-        id: `order_cat_${idx}`,
-        title: cat,
-        description: `View products`,
-      })),
+      title: `Categories (${page + 1}/${totalPages})`,
+      rows: categoryRows,
     },
     {
       title: "Navigation",
-      rows: [
-        {
-          id: "main_menu",
-          title: "↩️ Back to Main Menu",
-          description: "Return to main menu",
-        },
-      ],
+      rows: navigationRows,
     },
   ];
 
   await sendListMessage(
     from,
-    `🛍️ Aap kya lena chahenge? 😊
+    `🛍️ *Aap kya lena chahenge?* 😊
 
-Sabhi categories neeche di gayi hain.
+Neeche categories di gayi hain.
 
-👇 Neeche list me se apni pasand ki category choose kijiye.`,
+👇 Apni pasand ki category select kijiye.`,
     sections,
     "Choose Category",
   );
 }
 
-const PAGE_SIZE = 8;
+const CATEGORY_PAGE_SIZE = 7;
+const ITEM_PAGE_SIZE = 6;
 
 async function showCategoryItems(from, category, items, page = 0) {
-  const totalPages = Math.ceil(items.length / PAGE_SIZE);
+  const totalPages = Math.ceil(items.length / ITEM_PAGE_SIZE);
 
-  const start = page * PAGE_SIZE;
-  const end = start + PAGE_SIZE;
+  const start = page * ITEM_PAGE_SIZE;
+  const end = start + ITEM_PAGE_SIZE;
 
   const currentItems = items.slice(start, end);
 
   const itemRows = currentItems.map((item, idx) => ({
-    id: `item_${start + idx}`, // original index preserve
+    id: `item_${start + idx}`,
     title: item.name.substring(0, 24),
     description: `${item.weight} ${item.unit} - ₹${item.price}`.substring(
       0,
@@ -227,6 +259,7 @@ async function showCategoryItems(from, category, items, page = 0) {
 
   const navigationRows = [];
 
+  // Previous
   if (page > 0) {
     navigationRows.push({
       id: `item_prev_${page - 1}`,
@@ -235,6 +268,7 @@ async function showCategoryItems(from, category, items, page = 0) {
     });
   }
 
+  // Next
   if (page < totalPages - 1) {
     navigationRows.push({
       id: `item_next_${page + 1}`,
@@ -243,10 +277,18 @@ async function showCategoryItems(from, category, items, page = 0) {
     });
   }
 
+  // Categories
   navigationRows.push({
     id: "go_back_categories",
     title: "↩️ Categories",
     description: "Dusri category dekhein",
+  });
+
+  // Main Menu
+  navigationRows.push({
+    id: "main_menu",
+    title: "🏠 Main Menu",
+    description: "Main menu par jayein",
   });
 
   const sections = [
@@ -255,7 +297,7 @@ async function showCategoryItems(from, category, items, page = 0) {
       rows: itemRows,
     },
     {
-      title: "More Options",
+      title: "Navigation",
       rows: navigationRows,
     },
   ];
@@ -710,16 +752,25 @@ Main menu par wapas aane ke liye kabhi bhi "menu" likh sakte hain.`,
 
           // Handle main menu buttons globally (from any state)
           if (text === "orders") {
-            // If already in ordering flow, ignore (stale button click)
+            // Active flow mein old/stale Order Now button ignore karo
             if (
               state === "ordering" ||
               state === "selecting_item" ||
-              state === "quantity_input"
+              state === "packet_quantity" ||
+              state === "edit_packet_quantity" ||
+              state === "address_confirmation" ||
+              state === "address_input" ||
+              state === "awaiting_order_id"
             ) {
               continue;
             }
-            await showOrderCategories(from);
-            await conversation.setState(from, "ordering");
+
+            await showOrderCategories(from, 0);
+
+            await conversation.setState(from, "ordering", {
+              categoryPage: 0,
+            });
+
             continue;
           }
 
@@ -1058,15 +1109,42 @@ Packet ki quantity number mein bhej dijiye.
           }
           // Ordering handler - selecting category
           if (state === "ordering") {
-            // Parse category from list selection (format: order_cat_0)
+            // Category Next
+            if (text.startsWith("category_next_")) {
+              const page = Number(text.replace("category_next_", ""));
+
+              await showOrderCategories(from, page);
+
+              await conversation.setState(from, "ordering", {
+                categoryPage: page,
+              });
+
+              continue;
+            }
+
+            // Category Previous
+            if (text.startsWith("category_prev_")) {
+              const page = Number(text.replace("category_prev_", ""));
+
+              await showOrderCategories(from, page);
+
+              await conversation.setState(from, "ordering", {
+                categoryPage: page,
+              });
+
+              continue;
+            }
+
+            // Category selection
             let selectedCategory = null;
 
             if (text.startsWith("order_cat_")) {
-              const catIndex = parseInt(text.split("_")[2]);
+              const catIndex = parseInt(text.replace("order_cat_", ""));
+
               const categories = await catalog.getCategories();
+
               selectedCategory = categories[catIndex];
             } else {
-              // Fallback: direct text input
               selectedCategory = text.trim();
             }
 
@@ -1074,9 +1152,11 @@ Packet ki quantity number mein bhej dijiye.
               await catalog.getItemsByCategory(selectedCategory);
 
             if (categoryItems.length > 0) {
-              await showCategoryItems(from, selectedCategory, categoryItems);
+              await showCategoryItems(from, selectedCategory, categoryItems, 0);
+
               await conversation.setState(from, "selecting_item", {
                 selectedCategory,
+                itemPage: 0,
               });
             } else {
               await sendMessage(
@@ -1084,6 +1164,7 @@ Packet ki quantity number mein bhej dijiye.
                 "Invalid category. Please select from the list above.",
               );
             }
+
             continue;
           }
 
