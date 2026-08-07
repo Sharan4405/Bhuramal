@@ -174,16 +174,16 @@ Agar kisi bhi cheez me help chahiye ho, to *Support & Queries* par tap kar dijiy
 async function showOrderCategories(from, page = 0) {
   const categories = await catalog.getCategories();
 
-  const totalPages = Math.ceil(categories.length / PAGE_SIZE);
+  const CATEGORY_PAGE_SIZE = 7;
 
-  const start = page * PAGE_SIZE;
-  const end = start + PAGE_SIZE;
+  const totalPages = Math.ceil(categories.length / CATEGORY_PAGE_SIZE);
 
-  // Current page ki categories
+  const start = page * CATEGORY_PAGE_SIZE;
+  const end = start + CATEGORY_PAGE_SIZE;
+
   const currentCategories = categories.slice(start, end);
 
   const categoryRows = currentCategories.map((cat, idx) => ({
-    // Original category index preserve kar rahe hain
     id: `order_cat_${start + idx}`,
     title: cat.substring(0, 24),
     description: "View products",
@@ -209,11 +209,11 @@ async function showOrderCategories(from, page = 0) {
     });
   }
 
-  // Main menu
+  // Main Menu — har page par
   navigationRows.push({
     id: "main_menu",
-    title: "↩️ Back to Main Menu",
-    description: "Return to main menu",
+    title: "🏠 Main Menu",
+    description: "Main menu par wapas jayein",
   });
 
   const sections = [
@@ -231,9 +231,7 @@ async function showOrderCategories(from, page = 0) {
     from,
     `🛍️ Aap kya lena chahenge? 😊
 
-Sabhi categories neeche di gayi hain.
-
-👇 Neeche list me se apni pasand ki category choose kijiye.`,
+👇 Neeche se apni pasand ki category choose kijiye.`,
     sections,
     "Choose Category",
   );
