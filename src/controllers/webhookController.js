@@ -327,7 +327,12 @@ async function showCartWithOptions(from) {
           ? `${item.weight}g`
           : `${item.weight} ${item.unit}`;
 
-      return `${idx + 1}. *${item.name}*\n   📦 Packing: ${weight}\n   💰 ₹${Number(item.price).toFixed(2)} × ${item.quantity} = ₹${Number(item.totalPrice).toFixed(2)}`;
+      const unitPrice =
+        Number(item.quantity) > 0
+          ? Number(item.totalPrice) / Number(item.quantity)
+          : 0;
+
+      return `${idx + 1}. *${item.name}*\n   📦 Packing: ${weight}\n   💰 ₹${unitPrice.toFixed(2)} × ${item.quantity} = ₹${Number(item.totalPrice).toFixed(2)}`;
     })
     .join("\n\n");
 
